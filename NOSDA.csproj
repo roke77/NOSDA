@@ -1,0 +1,79 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    BepInEx 5 mod for Nuclear Option: plays a sound and shows a banner whenever a player is shot down.
+
+    >>> SET YOUR GAME PATH <<<
+    GameDir must point at your Nuclear Option install on the machine that BUILDS this. Create a
+    local, gitignored GameDir.props next to this file so your path stays out of source control:
+
+      <Project><PropertyGroup>
+        <GameDir>D:\SteamLibrary\steamapps\common\Nuclear Option</GameDir>
+      </PropertyGroup></Project>
+  -->
+  <Import Project="GameDir.props" Condition="Exists('GameDir.props')" />
+
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option</GameDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>NOSDA</AssemblyName>
+    <Product>NOSDA</Product>
+    <Description>Nuclear Option Shut-Down Announcer: plays a sound when a player is shot down</Description>
+    <Version>1.0.0</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>NOSDA</RootNamespace>
+    <DebugType>portable</DebugType>
+    <NoWarn>BepInEx002</NoWarn>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- sound.wav ships as a loose file next to the DLL, not embedded — so a player can replace it
+         with their own file of the same name. Copied alongside the build output for local testing;
+         DeployToGame below copies it into BepInEx/plugins/ too. -->
+    <None Include="sound.wav" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" />
+    <PackageReference Include="UnityEngine.Modules" Version="2022.3.6" IncludeAssets="compile" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Assembly-CSharp.dll IS the compiled game code; referencing it lets us call MessageManager,
+         Aircraft, Player, etc. directly. -->
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(GameDir)\NuclearOption_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- MessageManager derives from Mirage's NetworkBehaviour — typeof(MessageManager) needs that
+         base type resolvable even though our own code never touches Mirage directly. -->
+    <Reference Include="Mirage">
+      <HintPath>$(GameDir)\NuclearOption_Data\Managed\Mirage.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- UnityEngine.UI (legacy uGUI) provides Canvas/CanvasScaler/Text for the on-screen banner —
+         not part of the UnityEngine.Modules compile package. -->
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(GameDir)\NuclearOption_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="DeployToGame" AfterTargets="Build">
+    <Copy
+      SourceFiles="$(OutputPath)$(AssemblyName).dll;sound.wav"
+      DestinationFolder="$(GameDir)\BepInEx\plugins\NOSDA"
+      OverwriteReadOnlyFiles="true" />
+    <Message Text="Deployed $(AssemblyName).dll and sound.wav to $(GameDir)\BepInEx\plugins\NOSDA" Importance="high" />
+  </Target>
+
+</Project>
