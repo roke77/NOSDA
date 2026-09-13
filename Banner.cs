@@ -22,14 +22,16 @@ namespace NOSDA
         private bool _isFriendly;
         private bool _livePreviewShowing;
 
-        internal void Build(Transform parent)
+        internal void Build()
         {
-            // typeof(RectTransform) is required here — a plain GameObject only gets a Transform,
-            // which breaks anchor-based positioning for every UI child parented under it (anchors
-            // interpolate against the immediate parent's RectTransform; with none, they collapse
-            // to a single point regardless of the anchor value).
+            // Root-level (no parent), not nested under the worker's plain Transform (which has no
+            // RectTransform of its own) — a ScreenSpaceOverlay Canvas renders full-screen either
+            // way, but an ancestor chain with no RectTransform in it is an atypical setup that may
+            // be interfering with CanvasScaler's own internal scaleFactor computation (suspected,
+            // not confirmed, cause of the banner's vertical range undershooting the true screen
+            // edge). DontDestroyOnLoad replaces the persistence it used to inherit from its parent.
             var canvasObj = new GameObject("NOSDA_Canvas", typeof(RectTransform));
-            canvasObj.transform.SetParent(parent, false);
+            DontDestroyOnLoad(canvasObj);
             _canvas = canvasObj.AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             _canvas.sortingOrder = short.MaxValue;
@@ -119,14 +121,7 @@ namespace NOSDA
 
             _rootRect.sizeDelta = new Vector2(groupWidth, groupHeight);
             float availableX = Mathf.Max(0f, canvasWidth - groupWidth);
-            // ponytail: VerticalRangeCorrection is a calibrated fudge factor, not a derived value —
-            // live testing showed PositionVertical needed ~1.32 (not 1.0) to actually reach the
-            // screen's top edge, and two different reasoned theories for why (Canvas.rect vs
-            // Screen.height/scaleFactor) produced the identical wrong number, so the real mechanism
-            // is still unidentified. Upgrade path: find what's actually under-measuring
-            // canvasHeight/over-measuring groupHeight, then remove this multiplier entirely.
-            const float VerticalRangeCorrection = 1.32f;
-            float availableY = Mathf.Max(0f, canvasHeight - groupHeight) * VerticalRangeCorrection;
+            float availableY = Mathf.Max(0f, canvasHeight - groupHeight);
             _rootRect.anchoredPosition = new Vector2(
                 BannerConfig.PositionHorizontal * availableX,
                 BannerConfig.PositionVertical * availableY);

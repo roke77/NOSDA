@@ -22,7 +22,7 @@ namespace NOSDA
             _audioSource = gameObject.AddComponent<AudioSource>();
             _audioSource.spatialBlend = 0f; // 2D cue, not positional in the 3D scene
             _banner = gameObject.AddComponent<Banner>();
-            _banner.Build(transform);
+            _banner.Build();
             StartCoroutine(LoadClip());
         }
 
