@@ -18,6 +18,7 @@ namespace NOSDA
         private Text _killerText = null!;
         private Coroutine? _hideCoroutine;
         private bool _isFriendly;
+        private bool _livePreviewShowing;
 
         internal void Build(Transform parent)
         {
@@ -118,6 +119,38 @@ namespace NOSDA
         {
             yield return new WaitForSeconds(VisibleSeconds);
             _root.SetActive(false);
+        }
+
+        // Live Preview (F1 menu) keeps a fixed sample banner on screen and re-applies BannerConfig
+        // every frame, so dragging a position/size/color slider shows the result immediately
+        // instead of needing a fresh Test button click each time. While either toggle is on, it
+        // overrides any real announcement's content and cancels its auto-hide — an accepted
+        // trade-off for a tuning aid the player turns off when done.
+        private void Update()
+        {
+            bool enemy = BannerConfig.LivePreviewEnemy;
+            bool friendly = BannerConfig.LivePreviewFriendly;
+            if (!enemy && !friendly)
+            {
+                if (_livePreviewShowing)
+                {
+                    _livePreviewShowing = false;
+                    _root.SetActive(false);
+                }
+                return;
+            }
+
+            if (_hideCoroutine != null) { StopCoroutine(_hideCoroutine); _hideCoroutine = null; }
+            _livePreviewShowing = true;
+
+            _nameText.text = "PreviewPilot";
+            _verbText.text = "SHOT DOWN";
+            _killerText.gameObject.SetActive(true);
+            _killerText.text = "by PreviewKiller";
+            _isFriendly = friendly;
+
+            ApplyStyle();
+            _root.SetActive(true);
         }
     }
 }

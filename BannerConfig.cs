@@ -14,6 +14,8 @@ namespace NOSDA
         private static ConfigEntry<float>? _lineSpacing;
         private static ConfigEntry<float>? _horizontalPosition;
         private static ConfigEntry<float>? _verticalPosition;
+        private static ConfigEntry<bool>? _livePreviewEnemy;
+        private static ConfigEntry<bool>? _livePreviewFriendly;
 
         private static readonly ColorSet EnemyColor = new ColorSet("NOSDA_EnemyColorHex");
         private static readonly ColorSet FriendlyColor = new ColorSet("NOSDA_FriendlyColorHex");
@@ -30,6 +32,11 @@ namespace NOSDA
 
         // Screen anchor: (0,0) bottom-left, (1,1) top-right.
         public static Vector2 AnchorPoint => new Vector2(_horizontalPosition?.Value ?? 0.5f, _verticalPosition?.Value ?? 1f);
+
+        // A persistent sample banner Banner.Update() keeps showing while true, so slider edits
+        // are visible immediately. Mutually exclusive with each other (see Bind).
+        public static bool LivePreviewEnemy => _livePreviewEnemy?.Value ?? false;
+        public static bool LivePreviewFriendly => _livePreviewFriendly?.Value ?? false;
 
         public static void Bind(ConfigFile config)
         {
@@ -51,6 +58,17 @@ namespace NOSDA
                 "Preview a friendly crash (no killer line), using the current settings below.", null,
                 new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Friendly Crash", "TestPilot", null, true) }));
 
+            // Unlike the Test buttons above (fire once, auto-hide after 2.5s), these keep a sample
+            // banner on screen continuously so position/size/color edits are visible immediately
+            // while dragging a slider. The two are mutually exclusive — enabling one disables the
+            // other, since both would render on top of each other at the same position.
+            _livePreviewEnemy = config.Bind(section, "Live Preview: Enemy", false,
+                new ConfigDescription("Keep an enemy-colored sample banner on screen continuously, to preview edits live."));
+            _livePreviewFriendly = config.Bind(section, "Live Preview: Friendly", false,
+                new ConfigDescription("Keep a friendly-colored sample banner on screen continuously, to preview edits live."));
+            _livePreviewEnemy.SettingChanged += (_, _) => { if (_livePreviewEnemy.Value) _livePreviewFriendly.Value = false; };
+            _livePreviewFriendly.SettingChanged += (_, _) => { if (_livePreviewFriendly.Value) _livePreviewEnemy.Value = false; };
+
             _nameFontSize = config.Bind(section, "NameFontSize", 20,
                 new ConfigDescription("Font size of the player-name line.", new AcceptableValueRange<int>(8, 150)));
             _verbFontSize = config.Bind(section, "VerbFontSize", 20,
@@ -61,7 +79,7 @@ namespace NOSDA
                 new ConfigDescription("Gap between lines, in canvas units, on top of each line's own text height.", new AcceptableValueRange<float>(0f, 100f)));
 
             EnemyColor.Bind(config, section, "EnemyColor", new Color(1f, 0f, 0f));
-            FriendlyColor.Bind(config, section, "FriendlyColor", new Color(0.3f, 0.6f, 1f));
+            FriendlyColor.Bind(config, section, "FriendlyColor", new Color(0f, 0f, 1f));
 
             _horizontalPosition = config.Bind(section, "HorizontalPosition", 0.5f,
                 new ConfigDescription("Horizontal position on screen: 0 = left edge, 1 = right edge.", new AcceptableValueRange<float>(0f, 1f)));
