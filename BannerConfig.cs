@@ -95,6 +95,11 @@ namespace NOSDA
             _swatch.SetPixel(0, 0, color);
             _swatch.Apply();
 
+            // ConfigurationManager calls CustomDrawer from inside its own row's BeginHorizontal —
+            // without this wrapper, each row below is a horizontal sibling of that row instead of
+            // stacking underneath it, and everything spills out sideways instead of downward.
+            GUILayout.BeginVertical();
+
             GUILayout.BeginHorizontal();
             GUILayout.Label(_swatch, GUILayout.Width(32), GUILayout.Height(20));
 
@@ -113,6 +118,8 @@ namespace NOSDA
             DrawChannelSlider("G", _colorG);
             DrawChannelSlider("B", _colorB);
             DrawChannelSlider("A", _colorA);
+
+            GUILayout.EndVertical();
         }
 
         private static void DrawChannelSlider(string label, ConfigEntry<float>? entry)
@@ -120,7 +127,7 @@ namespace NOSDA
             if (entry == null) return;
             GUILayout.BeginHorizontal();
             GUILayout.Label(label, GUILayout.Width(14));
-            entry.Value = GUILayout.HorizontalSlider(entry.Value, 0f, 1f, GUILayout.Width(150));
+            entry.Value = GUILayout.HorizontalSlider(entry.Value, 0f, 1f, GUILayout.Width(120));
             GUILayout.Label(entry.Value.ToString("0.00", CultureInfo.InvariantCulture), GUILayout.Width(36));
             GUILayout.EndHorizontal();
         }
