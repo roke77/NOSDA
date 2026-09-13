@@ -24,6 +24,7 @@ namespace NOSDA
         private void Awake()
         {
             Log = Logger;
+            BannerConfig.Bind(Config);
             SceneManager.sceneLoaded += OnSceneLoaded;
 
             var harmony = new Harmony(PluginGuid);

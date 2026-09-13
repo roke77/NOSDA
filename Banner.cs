@@ -5,16 +5,13 @@ using UnityEngine.UI;
 namespace NOSDA
 {
     // On-screen shootdown/crash banner: a bold main line, plus a smaller "by <killer>" sub-line
-    // shown only when there's a shooter. Tweak the constants below for size, color, or position.
+    // shown only when there's a shooter. Size, color, and position come from BannerConfig
+    // (adjustable live via BepInEx's F1 Configuration Manager menu) — this file only lays out
+    // and re-styles the two lines.
     internal class Banner : MonoBehaviour
     {
-        private const int MainFontSize = 72;
-        private const int KillerFontSize = 28;
-        private static readonly Color TextColor = Color.red;
-        private static readonly Vector2 AnchorPoint = new Vector2(0.5f, 0.75f); // 50% across, 75% up the screen
         private static readonly Vector2 MainSize = new Vector2(1600, 150);
         private static readonly Vector2 KillerSize = new Vector2(1600, 60);
-        private static readonly Vector2 KillerOffset = new Vector2(0, -90); // below the main line
         private const float VisibleSeconds = 2.5f;
 
         private GameObject _root = null!;
@@ -34,33 +31,53 @@ namespace NOSDA
             _root = new GameObject("NOSDA_BannerRoot");
             _root.transform.SetParent(canvasObj.transform, false);
 
-            _mainText = MakeText("NOSDA_BannerText", MainFontSize, FontStyle.Bold, Vector2.zero, MainSize);
-            _killerText = MakeText("NOSDA_KillerText", KillerFontSize, FontStyle.Normal, KillerOffset, KillerSize);
+            _mainText = MakeText("NOSDA_BannerText", FontStyle.Bold, MainSize);
+            _killerText = MakeText("NOSDA_KillerText", FontStyle.Normal, KillerSize);
 
+            ApplyStyle();
             _root.SetActive(false);
         }
 
-        private Text MakeText(string name, int fontSize, FontStyle style, Vector2 anchoredPosition, Vector2 size)
+        private Text MakeText(string name, FontStyle style, Vector2 size)
         {
             var textObj = new GameObject(name);
             textObj.transform.SetParent(_root.transform, false);
             Text text = textObj.AddComponent<Text>();
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            text.fontSize = fontSize;
             text.fontStyle = style;
             text.alignment = TextAnchor.MiddleCenter;
-            text.color = TextColor;
-            RectTransform rect = text.rectTransform;
-            rect.anchorMin = AnchorPoint;
-            rect.anchorMax = AnchorPoint;
-            rect.anchoredPosition = anchoredPosition;
-            rect.sizeDelta = size;
+            // Config lets font size grow well past what a fixed box would fit — never clip it.
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.rectTransform.sizeDelta = size;
             return text;
+        }
+
+        // Re-reads BannerConfig so an F1-menu edit takes effect on the next announcement.
+        private void ApplyStyle()
+        {
+            Vector2 anchor = BannerConfig.AnchorPoint;
+            Color color = BannerConfig.TextColor;
+
+            Restyle(_mainText, BannerConfig.MainFontSize, anchor, Vector2.zero, color);
+            Restyle(_killerText, BannerConfig.KillerFontSize, anchor, BannerConfig.KillerOffset, color);
+        }
+
+        private static void Restyle(Text text, int fontSize, Vector2 anchor, Vector2 anchoredPosition, Color color)
+        {
+            text.fontSize = fontSize;
+            text.color = color;
+            RectTransform rect = text.rectTransform;
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.anchoredPosition = anchoredPosition;
         }
 
         // killerName is null for a crash (no shooter) — the sub-line is omitted rather than left blank.
         internal void Show(string playerName, string? killerName)
         {
+            ApplyStyle();
+
             _mainText.text = killerName != null ? $"{playerName} SHOT DOWN" : $"{playerName} CRASHED";
             _killerText.gameObject.SetActive(killerName != null);
             if (killerName != null) _killerText.text = $"by {killerName}";
