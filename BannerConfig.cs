@@ -31,6 +31,16 @@ namespace NOSDA
         {
             const string section = "Banner";
 
+            // Dummy bool entries — CustomDrawer replaces their checkbox with a button, so the
+            // value itself is never read. Bound first so the buttons sit above the sliders they're
+            // meant to preview.
+            config.Bind(section, "Test Shot Down", false, new ConfigDescription(
+                "Preview the banner as a shootdown, using the current settings below.", null,
+                new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Shot Down", "TestPilot", "TestKiller") }));
+            config.Bind(section, "Test Crash", false, new ConfigDescription(
+                "Preview the banner as a crash (no killer line), using the current settings below.", null,
+                new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Crash", "TestPilot", null) }));
+
             _mainFontSize = config.Bind(section, "MainFontSize", 72,
                 new ConfigDescription("Font size of the main SHOT DOWN / CRASHED line.", new AcceptableValueRange<int>(20, 150)));
             _killerFontSize = config.Bind(section, "KillerFontSize", 28,
@@ -49,6 +59,11 @@ namespace NOSDA
                 new ConfigDescription("Vertical position on screen: 0 = bottom edge, 1 = top edge.", new AcceptableValueRange<float>(0f, 1f)));
             _killerLineOffset = config.Bind(section, "KillerLineOffset", -90f,
                 new ConfigDescription("Vertical offset of the 'by <killer>' line from the main line, in canvas units. Negative moves it down.", new AcceptableValueRange<float>(-400f, 0f)));
+        }
+
+        private static void DrawTestButton(ConfigEntryBase _, string label, string playerName, string? killerName)
+        {
+            if (GUILayout.Button(label)) Plugin.Announcer?.Announce(playerName, killerName);
         }
     }
 }
