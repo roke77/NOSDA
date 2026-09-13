@@ -11,6 +11,8 @@ Whenever the game announces a player has been shot down or crashed, NOSDA plays 
 
 Swap `sound.wav` out for your own — same filename, any WAV — to change the sound.
 
+If [BepInEx.ConfigurationManager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is installed, press F1 in-game and open NOSDA's "Banner" section to adjust each line's font size, color, and screen position live, with buttons to preview a sample banner without waiting for a real kill.
+
 Runs entirely client-side: it only reacts to a notification the client already receives, so it's safe to use on public servers.
 
 ## Install

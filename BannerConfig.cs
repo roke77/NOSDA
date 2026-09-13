@@ -35,43 +35,58 @@ namespace NOSDA
         public static float PositionVertical => _verticalPosition?.Value ?? 1f;
 
         // A persistent sample banner Banner.Update() keeps showing while true, so slider edits
-        // are visible immediately. Mutually exclusive with each other (see Bind).
+        // are visible immediately. Mutually exclusive with each other (see BindLivePreviewToggles).
         public static bool LivePreviewEnemy => _livePreviewEnemy?.Value ?? false;
         public static bool LivePreviewFriendly => _livePreviewFriendly?.Value ?? false;
 
         public static void Bind(ConfigFile config)
         {
             const string section = "Banner";
+            BindTestButtons(config, section);
+            BindLivePreviewToggles(config, section);
+            BindTextSizes(config, section);
+            EnemyColor.Bind(config, section, "EnemyColor", new Color(1f, 0f, 0f));
+            FriendlyColor.Bind(config, section, "FriendlyColor", new Color(0f, 0f, 1f));
+            BindPosition(config, section);
+        }
 
-            // Dummy bool entries — CustomDrawer replaces their checkbox with a button, so the
-            // value itself is never read. Bound first so the buttons sit above the settings
-            // they're meant to preview.
-            config.Bind(section, "Test Enemy Shot Down", false, new ConfigDescription(
-                "Preview an enemy shootdown, using the current settings below.", null,
-                new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Enemy Shot Down", "TestPilot", "TestKiller", false) }));
-            config.Bind(section, "Test Enemy Crash", false, new ConfigDescription(
-                "Preview an enemy crash (no killer line), using the current settings below.", null,
-                new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Enemy Crash", "TestPilot", null, false) }));
-            config.Bind(section, "Test Friendly Shot Down", false, new ConfigDescription(
-                "Preview a friendly shootdown, using the current settings below.", null,
-                new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Friendly Shot Down", "TestPilot", "TestKiller", true) }));
-            config.Bind(section, "Test Friendly Crash", false, new ConfigDescription(
-                "Preview a friendly crash (no killer line), using the current settings below.", null,
-                new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Friendly Crash", "TestPilot", null, true) }));
+        // Dummy bool entries — CustomDrawer replaces their checkbox with a button, so the value
+        // itself is never read. Bound first so the buttons sit above the settings they preview.
+        private static readonly (string Key, string Description, string Label, string? KillerName, bool IsFriendly)[] TestButtonSpecs =
+        {
+            ("Test Enemy Shot Down", "Preview an enemy shootdown, using the current settings below.", "Preview: Enemy Shot Down", "TestKiller", false),
+            ("Test Enemy Crash", "Preview an enemy crash (no killer line), using the current settings below.", "Preview: Enemy Crash", null, false),
+            ("Test Friendly Shot Down", "Preview a friendly shootdown, using the current settings below.", "Preview: Friendly Shot Down", "TestKiller", true),
+            ("Test Friendly Crash", "Preview a friendly crash (no killer line), using the current settings below.", "Preview: Friendly Crash", null, true),
+        };
 
-            // Unlike the Test buttons above (fire once, auto-hide after 2.5s), these keep a sample
-            // banner on screen continuously so position/size/color edits are visible immediately
-            // while dragging a slider. The two are mutually exclusive — enabling one disables the
-            // other, since both would render on top of each other at the same position.
+        private static void BindTestButtons(ConfigFile config, string section)
+        {
+            foreach (var spec in TestButtonSpecs)
+            {
+                config.Bind(section, spec.Key, false, new ConfigDescription(spec.Description, null,
+                    new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, spec.Label, "TestPilot", spec.KillerName, spec.IsFriendly) }));
+            }
+        }
+
+        // Unlike the Test buttons above (fire once, auto-hide after 2.5s), these keep a sample
+        // banner on screen continuously so position/size/color edits are visible immediately while
+        // dragging a slider. The two are mutually exclusive — enabling one disables the other,
+        // since both would render on top of each other at the same position.
+        private static void BindLivePreviewToggles(ConfigFile config, string section)
+        {
             _livePreviewEnemy = config.Bind(section, "Live Preview: Enemy", false,
                 new ConfigDescription("Keep an enemy-colored sample banner on screen continuously, to preview edits live."));
             _livePreviewFriendly = config.Bind(section, "Live Preview: Friendly", false,
                 new ConfigDescription("Keep a friendly-colored sample banner on screen continuously, to preview edits live."));
             _livePreviewEnemy.SettingChanged += (_, _) => { if (_livePreviewEnemy.Value) _livePreviewFriendly.Value = false; };
             _livePreviewFriendly.SettingChanged += (_, _) => { if (_livePreviewFriendly.Value) _livePreviewEnemy.Value = false; };
+        }
 
-            // "TextSize*" keys keep the 3 font sizes adjacent in the F1 menu (sorted alphabetically
-            // by key), with "TextSpacing" sorting right after them.
+        // "TextSize*" keys keep the 3 font sizes adjacent in the F1 menu (sorted alphabetically by
+        // key), with "TextSpacing" sorting right after them.
+        private static void BindTextSizes(ConfigFile config, string section)
+        {
             _nameFontSize = config.Bind(section, "TextSizeName", 20,
                 new ConfigDescription("Font size of the player-name line.", new AcceptableValueRange<int>(8, 150)));
             _verbFontSize = config.Bind(section, "TextSizeVerb", 20,
@@ -80,16 +95,16 @@ namespace NOSDA
                 new ConfigDescription("Font size of the smaller 'by <killer>' line.", new AcceptableValueRange<int>(8, 80)));
             _lineSpacing = config.Bind(section, "TextSpacing", 0f,
                 new ConfigDescription("Gap between lines, in canvas units, on top of each line's own text height.", new AcceptableValueRange<float>(0f, 100f)));
+        }
 
-            EnemyColor.Bind(config, section, "EnemyColor", new Color(1f, 0f, 0f));
-            FriendlyColor.Bind(config, section, "FriendlyColor", new Color(0f, 0f, 1f));
-
-            // Named to sort adjacently in the F1 menu, which lists entries alphabetically by key —
-            // "HorizontalPosition"/"VerticalPosition" landed far apart under that sort.
+        // Named to sort adjacently in the F1 menu, which lists entries alphabetically by key —
+        // "HorizontalPosition"/"VerticalPosition" landed far apart under that sort.
+        private static void BindPosition(ConfigFile config, string section)
+        {
             _horizontalPosition = config.Bind(section, "PositionHorizontal", 0.5f,
                 new ConfigDescription("Horizontal position: 0 = flush against the screen's left edge, 1 = flush against the right edge. The banner is always fully on screen.", new AcceptableValueRange<float>(0f, 1f)));
-            // TEMP: range widened to 0-2 for diagnosing the vertical positioning bug — normal range
-            // is 0-1, put back once the underlying issue is confirmed fixed.
+            // TEMP: range widened to 0-2 while diagnosing a vertical-positioning undershoot —
+            // narrow back to 0-1 once the underlying cause is confirmed fixed.
             _verticalPosition = config.Bind(section, "PositionVertical", 1f,
                 new ConfigDescription("Vertical position: 0 = flush against the screen's bottom edge, 1 = flush against the top edge. The banner is always fully on screen.", new AcceptableValueRange<float>(0f, 2f)));
         }

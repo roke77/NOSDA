@@ -24,12 +24,11 @@ namespace NOSDA
 
         internal void Build()
         {
-            // Root-level (no parent), not nested under the worker's plain Transform (which has no
-            // RectTransform of its own) — a ScreenSpaceOverlay Canvas renders full-screen either
-            // way, but an ancestor chain with no RectTransform in it is an atypical setup that may
-            // be interfering with CanvasScaler's own internal scaleFactor computation (suspected,
-            // not confirmed, cause of the banner's vertical range undershooting the true screen
-            // edge). DontDestroyOnLoad replaces the persistence it used to inherit from its parent.
+            // Root-level (no parent) — Canvas GameObjects are conventionally unparented; nesting
+            // one under a plain Transform with no RectTransform of its own is atypical and risks
+            // interfering with CanvasScaler's internal scaleFactor computation even though the
+            // ScreenSpaceOverlay render itself still fills the screen regardless of parentage.
+            // DontDestroyOnLoad replaces the persistence it would otherwise inherit from a parent.
             var canvasObj = new GameObject("NOSDA_Canvas", typeof(RectTransform));
             DontDestroyOnLoad(canvasObj);
             _canvas = canvasObj.AddComponent<Canvas>();
@@ -40,9 +39,9 @@ namespace NOSDA
             // _root is sized to exactly fit its current content (in ApplyStyle) and anchored to
             // the canvas's bottom-left corner via its own pivot, so PositionHorizontal/
             // PositionVertical slide _root's own near edge from 0 (flush against the screen's
-            // near edge) to 1 (flush against the far edge) — the banner is always fully on screen
-            // at every slider value, rather than being anchored by a single point that pushes half
-            // of it off-screen at the extremes (the previous approach's actual bug).
+            // near edge) to 1 (flush against the far edge) — the banner stays fully on screen at
+            // every slider value instead of being anchored by a single point whose box extends
+            // equally past it in both directions.
             _root = new GameObject("NOSDA_BannerRoot", typeof(RectTransform));
             _root.transform.SetParent(canvasObj.transform, false);
             _rootRect = (RectTransform)_root.transform;
@@ -116,8 +115,11 @@ namespace NOSDA
             // own RectTransform.rect isn't a reliable source for this: it renders full-screen via
             // Canvas's internal overlay handling regardless of its own declared anchors/size, but
             // that special-cased rendering doesn't mean .rect itself reports true screen dimensions.
-            float canvasWidth = Screen.width / _canvas.scaleFactor;
-            float canvasHeight = Screen.height / _canvas.scaleFactor;
+            // Floored to avoid dividing by ~0 (and producing an Infinity/NaN position) before
+            // CanvasScaler finishes its first calculation.
+            float scaleFactor = Mathf.Max(_canvas.scaleFactor, 0.01f);
+            float canvasWidth = Screen.width / scaleFactor;
+            float canvasHeight = Screen.height / scaleFactor;
 
             _rootRect.sizeDelta = new Vector2(groupWidth, groupHeight);
             float availableX = Mathf.Max(0f, canvasWidth - groupWidth);
