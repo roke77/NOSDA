@@ -12,7 +12,6 @@ namespace NOSDA
         private const float VisibleSeconds = 2.5f;
         private static readonly Vector2 LineSize = new Vector2(1600, 200);
 
-        private Canvas _canvas = null!;
         private RectTransform _canvasRect = null!;
         private RectTransform _rootRect = null!;
         private GameObject _root = null!;
@@ -31,9 +30,9 @@ namespace NOSDA
             // to a single point regardless of the anchor value).
             var canvasObj = new GameObject("NOSDA_Canvas", typeof(RectTransform));
             canvasObj.transform.SetParent(parent, false);
-            _canvas = canvasObj.AddComponent<Canvas>();
-            _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _canvas.sortingOrder = short.MaxValue;
+            Canvas canvas = canvasObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = short.MaxValue;
             canvasObj.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             _canvasRect = (RectTransform)canvasObj.transform;
 
@@ -111,17 +110,9 @@ namespace NOSDA
                 SetLinePosition(_killerText, groupWidth, y);
             }
 
-            // For RenderMode.ScreenSpaceOverlay, the Canvas's own RectTransform.rect is always raw
-            // screen pixels, regardless of CanvasScaler — but every child (including font sizes
-            // and preferredWidth/Height below) is measured in CanvasScaler's scaled units. Dividing
-            // by scaleFactor converts the canvas size into that same scaled-unit system; skipping
-            // this step is what made the banner overshoot the screen at high position values.
-            float canvasWidth = _canvasRect.rect.width / _canvas.scaleFactor;
-            float canvasHeight = _canvasRect.rect.height / _canvas.scaleFactor;
-
             _rootRect.sizeDelta = new Vector2(groupWidth, groupHeight);
-            float availableX = Mathf.Max(0f, canvasWidth - groupWidth);
-            float availableY = Mathf.Max(0f, canvasHeight - groupHeight);
+            float availableX = Mathf.Max(0f, _canvasRect.rect.width - groupWidth);
+            float availableY = Mathf.Max(0f, _canvasRect.rect.height - groupHeight);
             _rootRect.anchoredPosition = new Vector2(
                 BannerConfig.PositionHorizontal * availableX,
                 BannerConfig.PositionVertical * availableY);
