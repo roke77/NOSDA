@@ -17,6 +17,7 @@ namespace NOSDA
         private Text _verbText = null!;
         private Text _killerText = null!;
         private Coroutine? _hideCoroutine;
+        private bool _isFriendly;
 
         internal void Build(Transform parent)
         {
@@ -67,7 +68,7 @@ namespace NOSDA
         private void ApplyStyle()
         {
             Vector2 anchor = BannerConfig.AnchorPoint;
-            Color color = BannerConfig.TextColor;
+            Color color = BannerConfig.GetTextColor(_isFriendly);
             float spacing = BannerConfig.LineSpacing;
 
             _nameText.fontSize = BannerConfig.NameFontSize;
@@ -97,12 +98,14 @@ namespace NOSDA
         }
 
         // killerName is null for a crash (no shooter) — that line is hidden rather than left blank.
-        internal void Show(string playerName, string? killerName)
+        // isFriendly picks which of BannerConfig's two color sets to use.
+        internal void Show(string playerName, string? killerName, bool isFriendly)
         {
             _nameText.text = playerName;
             _verbText.text = killerName != null ? "SHOT DOWN" : "CRASHED";
             _killerText.gameObject.SetActive(killerName != null);
             if (killerName != null) _killerText.text = $"by {killerName}";
+            _isFriendly = isFriendly;
 
             ApplyStyle();
 

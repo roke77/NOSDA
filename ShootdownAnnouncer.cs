@@ -50,11 +50,12 @@ namespace NOSDA
             _clip = DownloadHandlerAudioClip.GetContent(request);
         }
 
-        // killerName is null for a crash (no shooter).
-        internal void Announce(string playerName, string? killerName)
+        // killerName is null for a crash (no shooter). isFriendly is whether the killed player
+        // shares the local player's own faction — it picks which banner color to use.
+        internal void Announce(string playerName, string? killerName, bool isFriendly)
         {
             if (_clip != null) _audioSource.PlayOneShot(_clip);
-            _banner.Show(playerName, killerName);
+            _banner.Show(playerName, killerName, isFriendly);
         }
     }
 }

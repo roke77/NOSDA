@@ -12,12 +12,11 @@ namespace NOSDA
         private static ConfigEntry<int>? _verbFontSize;
         private static ConfigEntry<int>? _killerFontSize;
         private static ConfigEntry<float>? _lineSpacing;
-        private static ConfigEntry<float>? _colorR;
-        private static ConfigEntry<float>? _colorG;
-        private static ConfigEntry<float>? _colorB;
-        private static ConfigEntry<float>? _colorA;
         private static ConfigEntry<float>? _horizontalPosition;
         private static ConfigEntry<float>? _verticalPosition;
+
+        private static readonly ColorSet EnemyColor = new ColorSet("NOSDA_EnemyColorHex");
+        private static readonly ColorSet FriendlyColor = new ColorSet("NOSDA_FriendlyColorHex");
 
         public static int NameFontSize => _nameFontSize?.Value ?? 20;
         public static int VerbFontSize => _verbFontSize?.Value ?? 20;
@@ -26,8 +25,8 @@ namespace NOSDA
         // Gap between adjacent lines, in canvas units, on top of each line's own text height.
         public static float LineSpacing => _lineSpacing?.Value ?? 0f;
 
-        public static Color TextColor => new Color(
-            _colorR?.Value ?? 1f, _colorG?.Value ?? 0f, _colorB?.Value ?? 0f, _colorA?.Value ?? 1f);
+        // isFriendly = the killed player shares the local player's own faction.
+        public static Color GetTextColor(bool isFriendly) => (isFriendly ? FriendlyColor : EnemyColor).Value;
 
         // Screen anchor: (0,0) bottom-left, (1,1) top-right.
         public static Vector2 AnchorPoint => new Vector2(_horizontalPosition?.Value ?? 0.5f, _verticalPosition?.Value ?? 1f);
@@ -39,36 +38,30 @@ namespace NOSDA
             // Dummy bool entries — CustomDrawer replaces their checkbox with a button, so the
             // value itself is never read. Bound first so the buttons sit above the settings
             // they're meant to preview.
-            config.Bind(section, "Test Shot Down", false, new ConfigDescription(
-                "Preview the banner as a shootdown, using the current settings below.", null,
-                new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Shot Down", "TestPilot", "TestKiller") }));
-            config.Bind(section, "Test Crash", false, new ConfigDescription(
-                "Preview the banner as a crash (no killer line), using the current settings below.", null,
-                new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Crash", "TestPilot", null) }));
+            config.Bind(section, "Test Enemy Shot Down", false, new ConfigDescription(
+                "Preview an enemy shootdown, using the current settings below.", null,
+                new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Enemy Shot Down", "TestPilot", "TestKiller", false) }));
+            config.Bind(section, "Test Enemy Crash", false, new ConfigDescription(
+                "Preview an enemy crash (no killer line), using the current settings below.", null,
+                new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Enemy Crash", "TestPilot", null, false) }));
+            config.Bind(section, "Test Friendly Shot Down", false, new ConfigDescription(
+                "Preview a friendly shootdown, using the current settings below.", null,
+                new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Friendly Shot Down", "TestPilot", "TestKiller", true) }));
+            config.Bind(section, "Test Friendly Crash", false, new ConfigDescription(
+                "Preview a friendly crash (no killer line), using the current settings below.", null,
+                new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Friendly Crash", "TestPilot", null, true) }));
 
             _nameFontSize = config.Bind(section, "NameFontSize", 20,
-                new ConfigDescription("Font size of the player-name line.", new AcceptableValueRange<int>(10, 150)));
+                new ConfigDescription("Font size of the player-name line.", new AcceptableValueRange<int>(8, 150)));
             _verbFontSize = config.Bind(section, "VerbFontSize", 20,
-                new ConfigDescription("Font size of the SHOT DOWN / CRASHED line.", new AcceptableValueRange<int>(10, 150)));
+                new ConfigDescription("Font size of the SHOT DOWN / CRASHED line.", new AcceptableValueRange<int>(8, 150)));
             _killerFontSize = config.Bind(section, "KillerFontSize", 10,
-                new ConfigDescription("Font size of the smaller 'by <killer>' line.", new AcceptableValueRange<int>(5, 80)));
+                new ConfigDescription("Font size of the smaller 'by <killer>' line.", new AcceptableValueRange<int>(8, 80)));
             _lineSpacing = config.Bind(section, "LineSpacing", 0f,
                 new ConfigDescription("Gap between lines, in canvas units, on top of each line's own text height.", new AcceptableValueRange<float>(0f, 100f)));
 
-            // Only ColorRed gets a CustomDrawer (the combined swatch/hex/RGBA widget below); the
-            // other 3 channels are hidden from their own rows since that widget edits all four.
-            _colorR = config.Bind(section, "ColorRed", 1f,
-                new ConfigDescription("Text color.", new AcceptableValueRange<float>(0f, 1f),
-                    new ConfigurationManagerAttributes { CustomDrawer = DrawColorPicker }));
-            _colorG = config.Bind(section, "ColorGreen", 0f,
-                new ConfigDescription("Text color, green channel.", new AcceptableValueRange<float>(0f, 1f),
-                    new ConfigurationManagerAttributes { Browsable = false }));
-            _colorB = config.Bind(section, "ColorBlue", 0f,
-                new ConfigDescription("Text color, blue channel.", new AcceptableValueRange<float>(0f, 1f),
-                    new ConfigurationManagerAttributes { Browsable = false }));
-            _colorA = config.Bind(section, "ColorAlpha", 1f,
-                new ConfigDescription("Text color, alpha (opacity) channel.", new AcceptableValueRange<float>(0f, 1f),
-                    new ConfigurationManagerAttributes { Browsable = false }));
+            EnemyColor.Bind(config, section, "EnemyColor", new Color(1f, 0f, 0f));
+            FriendlyColor.Bind(config, section, "FriendlyColor", new Color(0.3f, 0.6f, 1f));
 
             _horizontalPosition = config.Bind(section, "HorizontalPosition", 0.5f,
                 new ConfigDescription("Horizontal position on screen: 0 = left edge, 1 = right edge.", new AcceptableValueRange<float>(0f, 1f)));
@@ -76,51 +69,90 @@ namespace NOSDA
                 new ConfigDescription("Vertical position on screen: 0 = bottom edge, 1 = top edge.", new AcceptableValueRange<float>(0f, 1f)));
         }
 
-        private static void DrawTestButton(ConfigEntryBase _, string label, string playerName, string? killerName)
+        private static void DrawTestButton(ConfigEntryBase _, string label, string playerName, string? killerName, bool isFriendly)
         {
-            if (GUILayout.Button(label)) Plugin.Announcer?.Announce(playerName, killerName);
+            if (GUILayout.Button(label)) Plugin.Announcer?.Announce(playerName, killerName, isFriendly);
         }
 
-        // The hex field syncs from the live RGBA values except while it has keyboard focus, so an
-        // in-progress edit isn't overwritten mid-keystroke by the next OnGUI pass.
-        private const string HexControlName = "NOSDA_ColorHex";
-        private static string _hexInput = "";
-        private static Texture2D? _swatch;
-
-        private static void DrawColorPicker(ConfigEntryBase _)
+        // Four float channels plus the combined swatch/hex/RGBA CustomDrawer widget that edits
+        // them together — bundled per color so Enemy and Friendly can each have their own
+        // independent hex-field text-entry state without colliding (GUI.SetNextControlName needs
+        // a name unique per on-screen control).
+        private sealed class ColorSet
         {
-            Color color = TextColor;
+            private readonly string _hexControlName;
+            private string _hexInput = "";
+            private ConfigEntry<float>? _r, _g, _b, _a;
 
-            _swatch ??= new Texture2D(1, 1);
-            _swatch.SetPixel(0, 0, color);
-            _swatch.Apply();
+            public ColorSet(string hexControlName) => _hexControlName = hexControlName;
 
-            // ConfigurationManager calls CustomDrawer from inside its own row's BeginHorizontal —
-            // without this wrapper, each row below is a horizontal sibling of that row instead of
-            // stacking underneath it, and everything spills out sideways instead of downward.
-            GUILayout.BeginVertical();
+            public Color Value => new Color(_r?.Value ?? 1f, _g?.Value ?? 0f, _b?.Value ?? 0f, _a?.Value ?? 1f);
 
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(_swatch, GUILayout.Width(32), GUILayout.Height(20));
-
-            GUI.SetNextControlName(HexControlName);
-            bool hexFocused = GUI.GetNameOfFocusedControl() == HexControlName;
-            if (!hexFocused) _hexInput = ColorToHex(color);
-            string typed = GUILayout.TextField(_hexInput, GUILayout.Width(90));
-            if (typed != _hexInput)
+            public void Bind(ConfigFile config, string section, string keyPrefix, Color defaultColor)
             {
-                _hexInput = typed;
-                if (TryParseHex(typed, out Color parsed)) SetColor(parsed);
+                // Only Red gets a CustomDrawer (the combined widget); Green/Blue/Alpha are hidden
+                // from their own rows since that widget edits all four together.
+                _r = config.Bind(section, $"{keyPrefix}Red", defaultColor.r,
+                    new ConfigDescription($"{keyPrefix.Replace("Color", "")} kill text color.", new AcceptableValueRange<float>(0f, 1f),
+                        new ConfigurationManagerAttributes { CustomDrawer = _ => Draw() }));
+                _g = config.Bind(section, $"{keyPrefix}Green", defaultColor.g,
+                    new ConfigDescription("Green channel.", new AcceptableValueRange<float>(0f, 1f),
+                        new ConfigurationManagerAttributes { Browsable = false }));
+                _b = config.Bind(section, $"{keyPrefix}Blue", defaultColor.b,
+                    new ConfigDescription("Blue channel.", new AcceptableValueRange<float>(0f, 1f),
+                        new ConfigurationManagerAttributes { Browsable = false }));
+                _a = config.Bind(section, $"{keyPrefix}Alpha", defaultColor.a,
+                    new ConfigDescription("Alpha (opacity) channel.", new AcceptableValueRange<float>(0f, 1f),
+                        new ConfigurationManagerAttributes { Browsable = false }));
             }
-            GUILayout.EndHorizontal();
 
-            DrawChannelSlider("R", _colorR);
-            DrawChannelSlider("G", _colorG);
-            DrawChannelSlider("B", _colorB);
-            DrawChannelSlider("A", _colorA);
+            private void Set(Color c)
+            {
+                if (_r != null) _r.Value = c.r;
+                if (_g != null) _g.Value = c.g;
+                if (_b != null) _b.Value = c.b;
+                if (_a != null) _a.Value = c.a;
+            }
 
-            GUILayout.EndVertical();
+            private void Draw()
+            {
+                Color color = Value;
+                _swatch ??= new Texture2D(1, 1);
+                _swatch.SetPixel(0, 0, color);
+                _swatch.Apply();
+
+                // ConfigurationManager calls CustomDrawer from inside its own row's
+                // BeginHorizontal — without this wrapper, each row below is a horizontal sibling
+                // of that row instead of stacking underneath it, and everything spills out
+                // sideways instead of downward.
+                GUILayout.BeginVertical();
+
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(_swatch, GUILayout.Width(32), GUILayout.Height(20));
+
+                GUI.SetNextControlName(_hexControlName);
+                bool hexFocused = GUI.GetNameOfFocusedControl() == _hexControlName;
+                if (!hexFocused) _hexInput = ColorToHex(color);
+                string typed = GUILayout.TextField(_hexInput, GUILayout.Width(90));
+                if (typed != _hexInput)
+                {
+                    _hexInput = typed;
+                    if (TryParseHex(typed, out Color parsed)) Set(parsed);
+                }
+                GUILayout.EndHorizontal();
+
+                DrawChannelSlider("R", _r);
+                DrawChannelSlider("G", _g);
+                DrawChannelSlider("B", _b);
+                DrawChannelSlider("A", _a);
+
+                GUILayout.EndVertical();
+            }
         }
+
+        // Shared 1x1 swatch texture — safe to share between both ColorSets since each Draw() call
+        // sets its pixel and reads it back synchronously, never deferred across OnGUI passes.
+        private static Texture2D? _swatch;
 
         private static void DrawChannelSlider(string label, ConfigEntry<float>? entry)
         {
@@ -130,14 +162,6 @@ namespace NOSDA
             entry.Value = GUILayout.HorizontalSlider(entry.Value, 0f, 1f, GUILayout.Width(120));
             GUILayout.Label(entry.Value.ToString("0.00", CultureInfo.InvariantCulture), GUILayout.Width(36));
             GUILayout.EndHorizontal();
-        }
-
-        private static void SetColor(Color c)
-        {
-            if (_colorR != null) _colorR.Value = c.r;
-            if (_colorG != null) _colorG.Value = c.g;
-            if (_colorB != null) _colorB.Value = c.b;
-            if (_colorA != null) _colorA.Value = c.a;
         }
 
         private static string ColorToHex(Color c) =>

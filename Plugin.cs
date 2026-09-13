@@ -72,19 +72,15 @@ namespace NOSDA
                 // player or NPC/AI) and a crash (killerID doesn't resolve at all: terrain, fuel,
                 // structural failure).
                 if (killedType != KillType.Aircraft) return;
-                string? playerName = GetPlayerName(killedID);
-                if (playerName == null) return;
+                if (!UnitRegistry.TryGetPersistentUnit(killedID, out PersistentUnit killed)) return;
+                if (killed.unit is not Aircraft killedAircraft || killedAircraft.Player == null) return;
 
-                Announcer?.Announce(playerName, GetKillerName(killerID));
-            }
+                string playerName = killedAircraft.Player.GetDisplayName(PlayerNameContext.ChatOrLeaderboard);
+                // No local HQ (e.g. not currently in a mission) reads as an enemy kill — the
+                // pre-existing, already-tested default color rather than a guessed-at third state.
+                bool isFriendly = GameManager.GetLocalHQ(out FactionHQ localHq) && localHq != null && killed.GetHQ() == localHq;
 
-            // Null when id doesn't resolve to a player-controlled Aircraft — an AI unit, a
-            // non-aircraft unit, or no unit at all.
-            private static string? GetPlayerName(PersistentID id)
-            {
-                if (!UnitRegistry.TryGetPersistentUnit(id, out PersistentUnit unit)) return null;
-                if (unit.unit is not Aircraft aircraft || aircraft.Player == null) return null;
-                return aircraft.Player.GetDisplayName(PlayerNameContext.ChatOrLeaderboard);
+                Announcer?.Announce(playerName, GetKillerName(killerID), isFriendly);
             }
 
             // Null only when killerID doesn't resolve to any unit (a crash, no shooter). Prefers
