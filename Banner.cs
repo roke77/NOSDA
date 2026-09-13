@@ -119,7 +119,14 @@ namespace NOSDA
 
             _rootRect.sizeDelta = new Vector2(groupWidth, groupHeight);
             float availableX = Mathf.Max(0f, canvasWidth - groupWidth);
-            float availableY = Mathf.Max(0f, canvasHeight - groupHeight);
+            // ponytail: VerticalRangeCorrection is a calibrated fudge factor, not a derived value —
+            // live testing showed PositionVertical needed ~1.32 (not 1.0) to actually reach the
+            // screen's top edge, and two different reasoned theories for why (Canvas.rect vs
+            // Screen.height/scaleFactor) produced the identical wrong number, so the real mechanism
+            // is still unidentified. Upgrade path: find what's actually under-measuring
+            // canvasHeight/over-measuring groupHeight, then remove this multiplier entirely.
+            const float VerticalRangeCorrection = 1.32f;
+            float availableY = Mathf.Max(0f, canvasHeight - groupHeight) * VerticalRangeCorrection;
             _rootRect.anchoredPosition = new Vector2(
                 BannerConfig.PositionHorizontal * availableX,
                 BannerConfig.PositionVertical * availableY);
