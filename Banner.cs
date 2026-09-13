@@ -12,7 +12,7 @@ namespace NOSDA
         private const float VisibleSeconds = 2.5f;
         private static readonly Vector2 LineSize = new Vector2(1600, 200);
 
-        private RectTransform _canvasRect = null!;
+        private Canvas _canvas = null!;
         private RectTransform _rootRect = null!;
         private GameObject _root = null!;
         private Text _nameText = null!;
@@ -30,11 +30,10 @@ namespace NOSDA
             // to a single point regardless of the anchor value).
             var canvasObj = new GameObject("NOSDA_Canvas", typeof(RectTransform));
             canvasObj.transform.SetParent(parent, false);
-            Canvas canvas = canvasObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = short.MaxValue;
+            _canvas = canvasObj.AddComponent<Canvas>();
+            _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            _canvas.sortingOrder = short.MaxValue;
             canvasObj.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            _canvasRect = (RectTransform)canvasObj.transform;
 
             // _root is sized to exactly fit its current content (in ApplyStyle) and anchored to
             // the canvas's bottom-left corner via its own pivot, so PositionHorizontal/
@@ -43,7 +42,7 @@ namespace NOSDA
             // at every slider value, rather than being anchored by a single point that pushes half
             // of it off-screen at the extremes (the previous approach's actual bug).
             _root = new GameObject("NOSDA_BannerRoot", typeof(RectTransform));
-            _root.transform.SetParent(_canvasRect, false);
+            _root.transform.SetParent(canvasObj.transform, false);
             _rootRect = (RectTransform)_root.transform;
             _rootRect.anchorMin = Vector2.zero;
             _rootRect.anchorMax = Vector2.zero;
@@ -110,9 +109,17 @@ namespace NOSDA
                 SetLinePosition(_killerText, groupWidth, y);
             }
 
+            // Screen.width/height (raw pixels) divided by the canvas's scaleFactor gives the same
+            // "content unit" system font sizes and preferredWidth/Height already use — the Canvas's
+            // own RectTransform.rect isn't a reliable source for this: it renders full-screen via
+            // Canvas's internal overlay handling regardless of its own declared anchors/size, but
+            // that special-cased rendering doesn't mean .rect itself reports true screen dimensions.
+            float canvasWidth = Screen.width / _canvas.scaleFactor;
+            float canvasHeight = Screen.height / _canvas.scaleFactor;
+
             _rootRect.sizeDelta = new Vector2(groupWidth, groupHeight);
-            float availableX = Mathf.Max(0f, _canvasRect.rect.width - groupWidth);
-            float availableY = Mathf.Max(0f, _canvasRect.rect.height - groupHeight);
+            float availableX = Mathf.Max(0f, canvasWidth - groupWidth);
+            float availableY = Mathf.Max(0f, canvasHeight - groupHeight);
             _rootRect.anchoredPosition = new Vector2(
                 BannerConfig.PositionHorizontal * availableX,
                 BannerConfig.PositionVertical * availableY);
