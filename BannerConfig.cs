@@ -88,8 +88,10 @@ namespace NOSDA
             // "HorizontalPosition"/"VerticalPosition" landed far apart under that sort.
             _horizontalPosition = config.Bind(section, "PositionHorizontal", 0.5f,
                 new ConfigDescription("Horizontal position: 0 = flush against the screen's left edge, 1 = flush against the right edge. The banner is always fully on screen.", new AcceptableValueRange<float>(0f, 1f)));
+            // TEMP: range widened to 0-2 for diagnosing the vertical positioning bug — normal range
+            // is 0-1, put back once the underlying issue is confirmed fixed.
             _verticalPosition = config.Bind(section, "PositionVertical", 1f,
-                new ConfigDescription("Vertical position: 0 = flush against the screen's bottom edge, 1 = flush against the top edge. The banner is always fully on screen.", new AcceptableValueRange<float>(0f, 1f)));
+                new ConfigDescription("Vertical position: 0 = flush against the screen's bottom edge, 1 = flush against the top edge. The banner is always fully on screen.", new AcceptableValueRange<float>(0f, 2f)));
         }
 
         private static void DrawTestButton(ConfigEntryBase _, string label, string playerName, string? killerName, bool isFriendly)
