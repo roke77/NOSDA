@@ -70,17 +70,19 @@ namespace NOSDA
                 // KillType.Aircraft covers both a shootdown (killerID resolves) and a crash
                 // (killerID doesn't — no shooter, e.g. terrain/fuel/structural failure).
                 if (killedType != KillType.Aircraft) return;
-                if (!UnitRegistry.TryGetPersistentUnit(killedID, out PersistentUnit killed)) return;
-                if (killed.unit is not Aircraft aircraft || aircraft.Player == null) return;
+                string? playerName = GetPlayerName(killedID);
+                if (playerName == null) return;
 
-                string? killerName = null;
-                if (UnitRegistry.TryGetPersistentUnit(killerID, out PersistentUnit killer)
-                    && killer.unit is Aircraft killerAircraft && killerAircraft.Player != null)
-                {
-                    killerName = killerAircraft.Player.GetDisplayName(PlayerNameContext.ChatOrLeaderboard);
-                }
+                Announcer?.Announce(playerName, GetPlayerName(killerID));
+            }
 
-                Announcer?.Announce(aircraft.Player.GetDisplayName(PlayerNameContext.ChatOrLeaderboard), killerName);
+            // Null when id doesn't resolve to a player-controlled Aircraft — an AI unit, a
+            // non-aircraft unit, or (for killerID on a crash) no unit at all.
+            private static string? GetPlayerName(PersistentID id)
+            {
+                if (!UnitRegistry.TryGetPersistentUnit(id, out PersistentUnit unit)) return null;
+                if (unit.unit is not Aircraft aircraft || aircraft.Player == null) return null;
+                return aircraft.Player.GetDisplayName(PlayerNameContext.ChatOrLeaderboard);
             }
         }
     }
