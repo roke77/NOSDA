@@ -19,18 +19,18 @@ namespace NOSDA
         private static ConfigEntry<float>? _horizontalPosition;
         private static ConfigEntry<float>? _verticalPosition;
 
-        public static int NameFontSize => _nameFontSize?.Value ?? 56;
-        public static int VerbFontSize => _verbFontSize?.Value ?? 72;
-        public static int KillerFontSize => _killerFontSize?.Value ?? 28;
+        public static int NameFontSize => _nameFontSize?.Value ?? 20;
+        public static int VerbFontSize => _verbFontSize?.Value ?? 20;
+        public static int KillerFontSize => _killerFontSize?.Value ?? 10;
 
         // Gap between adjacent lines, in canvas units, on top of each line's own text height.
-        public static float LineSpacing => _lineSpacing?.Value ?? 12f;
+        public static float LineSpacing => _lineSpacing?.Value ?? 0f;
 
         public static Color TextColor => new Color(
             _colorR?.Value ?? 1f, _colorG?.Value ?? 0f, _colorB?.Value ?? 0f, _colorA?.Value ?? 1f);
 
         // Screen anchor: (0,0) bottom-left, (1,1) top-right.
-        public static Vector2 AnchorPoint => new Vector2(_horizontalPosition?.Value ?? 0.5f, _verticalPosition?.Value ?? 0.75f);
+        public static Vector2 AnchorPoint => new Vector2(_horizontalPosition?.Value ?? 0.5f, _verticalPosition?.Value ?? 1f);
 
         public static void Bind(ConfigFile config)
         {
@@ -46,13 +46,13 @@ namespace NOSDA
                 "Preview the banner as a crash (no killer line), using the current settings below.", null,
                 new ConfigurationManagerAttributes { CustomDrawer = e => DrawTestButton(e, "Preview: Crash", "TestPilot", null) }));
 
-            _nameFontSize = config.Bind(section, "NameFontSize", 56,
-                new ConfigDescription("Font size of the player-name line.", new AcceptableValueRange<int>(20, 150)));
-            _verbFontSize = config.Bind(section, "VerbFontSize", 72,
-                new ConfigDescription("Font size of the SHOT DOWN / CRASHED line.", new AcceptableValueRange<int>(20, 150)));
-            _killerFontSize = config.Bind(section, "KillerFontSize", 28,
-                new ConfigDescription("Font size of the smaller 'by <killer>' line.", new AcceptableValueRange<int>(10, 80)));
-            _lineSpacing = config.Bind(section, "LineSpacing", 12f,
+            _nameFontSize = config.Bind(section, "NameFontSize", 20,
+                new ConfigDescription("Font size of the player-name line.", new AcceptableValueRange<int>(10, 150)));
+            _verbFontSize = config.Bind(section, "VerbFontSize", 20,
+                new ConfigDescription("Font size of the SHOT DOWN / CRASHED line.", new AcceptableValueRange<int>(10, 150)));
+            _killerFontSize = config.Bind(section, "KillerFontSize", 10,
+                new ConfigDescription("Font size of the smaller 'by <killer>' line.", new AcceptableValueRange<int>(5, 80)));
+            _lineSpacing = config.Bind(section, "LineSpacing", 0f,
                 new ConfigDescription("Gap between lines, in canvas units, on top of each line's own text height.", new AcceptableValueRange<float>(0f, 100f)));
 
             // Only ColorRed gets a CustomDrawer (the combined swatch/hex/RGBA widget below); the
@@ -72,7 +72,7 @@ namespace NOSDA
 
             _horizontalPosition = config.Bind(section, "HorizontalPosition", 0.5f,
                 new ConfigDescription("Horizontal position on screen: 0 = left edge, 1 = right edge.", new AcceptableValueRange<float>(0f, 1f)));
-            _verticalPosition = config.Bind(section, "VerticalPosition", 0.75f,
+            _verticalPosition = config.Bind(section, "VerticalPosition", 1f,
                 new ConfigDescription("Vertical position on screen: 0 = bottom edge, 1 = top edge.", new AcceptableValueRange<float>(0f, 1f)));
         }
 

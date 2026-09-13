@@ -53,13 +53,17 @@ namespace NOSDA
             text.alignment = TextAnchor.MiddleCenter;
             text.horizontalOverflow = HorizontalWrapMode.Overflow;
             text.verticalOverflow = VerticalWrapMode.Overflow;
+            // Top-center pivot: anchoredPosition tracks each line's top edge, not its center, so
+            // VerticalPosition=100% puts the first line's top edge flush against the screen's top
+            // edge instead of centering it there (which would push half the line off-screen).
+            text.rectTransform.pivot = new Vector2(0.5f, 1f);
             text.rectTransform.sizeDelta = LineSize;
             return text;
         }
 
         // Re-reads BannerConfig and re-stacks the visible lines around the shared anchor point —
-        // top line first, each next line spaced below the one above by its own text height plus
-        // LineSpacing. A hidden killer line leaves no gap behind it.
+        // top line first, each next line's top edge spacing below the line above by that line's
+        // own text height plus LineSpacing. A hidden killer line leaves no gap behind it.
         private void ApplyStyle()
         {
             Vector2 anchor = BannerConfig.AnchorPoint;
@@ -75,11 +79,11 @@ namespace NOSDA
 
             float y = 0f;
             SetLinePosition(_nameText, anchor, y);
-            y -= _nameText.preferredHeight / 2f + spacing + _verbText.preferredHeight / 2f;
+            y -= _nameText.preferredHeight + spacing;
             SetLinePosition(_verbText, anchor, y);
             if (_killerText.gameObject.activeSelf)
             {
-                y -= _verbText.preferredHeight / 2f + spacing + _killerText.preferredHeight / 2f;
+                y -= _verbText.preferredHeight + spacing;
                 SetLinePosition(_killerText, anchor, y);
             }
         }
