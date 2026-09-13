@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    BepInEx 5 mod for Nuclear Option: plays a sound and shows a banner whenever a player is shot down.
+    BepInEx 5 mod for Nuclear Option: plays a sound and shows a banner whenever a player is shot
+    down or crashes — one sound for an enemy kill, another for a friendly one.
 
     >>> SET YOUR GAME PATH <<<
     GameDir must point at your Nuclear Option install on the machine that BUILDS this. Create a
@@ -21,7 +22,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>NOSDA</AssemblyName>
     <Product>NOSDA</Product>
-    <Description>Nuclear Option Shut-Down Announcer: plays a sound when a player is shot down</Description>
+    <Description>Nuclear Option Shut-Down Announcer: plays a sound and shows a banner when a player is shot down or crashes</Description>
     <Version>0.2.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
@@ -35,10 +36,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- sound.wav ships as a loose file next to the DLL, not embedded — so a player can replace it
-         with their own file of the same name. Copied alongside the build output for local testing;
-         DeployToGame below copies it into BepInEx/plugins/ too. -->
-    <None Include="sound.wav" CopyToOutputDirectory="PreserveNewest" />
+    <!-- enemy.wav/friendly.wav ship as loose files next to the DLL, not embedded — so a player can
+         replace either with their own file of the same name. Copied alongside the build output for
+         local testing; DeployToGame below copies them into BepInEx/plugins/ too. -->
+    <None Include="enemy.wav" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="friendly.wav" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -70,10 +72,10 @@
 
   <Target Name="DeployToGame" AfterTargets="Build">
     <Copy
-      SourceFiles="$(OutputPath)$(AssemblyName).dll;sound.wav"
+      SourceFiles="$(OutputPath)$(AssemblyName).dll;enemy.wav;friendly.wav"
       DestinationFolder="$(GameDir)\BepInEx\plugins\NOSDA"
       OverwriteReadOnlyFiles="true" />
-    <Message Text="Deployed $(AssemblyName).dll and sound.wav to $(GameDir)\BepInEx\plugins\NOSDA" Importance="high" />
+    <Message Text="Deployed $(AssemblyName).dll, enemy.wav, and friendly.wav to $(GameDir)\BepInEx\plugins\NOSDA" Importance="high" />
   </Target>
 
 </Project>

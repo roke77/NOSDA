@@ -12,6 +12,7 @@ namespace NOSDA
         private static ConfigEntry<int>? _verbFontSize;
         private static ConfigEntry<int>? _killerFontSize;
         private static ConfigEntry<float>? _lineSpacing;
+        private static ConfigEntry<float>? _displayDuration;
         private static ConfigEntry<float>? _horizontalPosition;
         private static ConfigEntry<float>? _verticalPosition;
         private static ConfigEntry<bool>? _livePreviewEnemy;
@@ -26,6 +27,9 @@ namespace NOSDA
 
         // Gap between adjacent lines, in canvas units, on top of each line's own text height.
         public static float LineSpacing => _lineSpacing?.Value ?? 0f;
+
+        // How long the banner stays on screen before hiding, in seconds.
+        public static float DisplayDuration => _displayDuration?.Value ?? 2.5f;
 
         // isFriendly = the killed player shares the local player's own faction.
         public static Color GetTextColor(bool isFriendly) => (isFriendly ? FriendlyColor : EnemyColor).Value;
@@ -45,6 +49,8 @@ namespace NOSDA
             BindTestButtons(config, section);
             BindLivePreviewToggles(config, section);
             BindTextSizes(config, section);
+            _displayDuration = config.Bind(section, "DisplayDuration", 2.5f,
+                new ConfigDescription("How long the banner stays on screen, in seconds.", new AcceptableValueRange<float>(0.5f, 10f)));
             EnemyColor.Bind(config, section, "EnemyColor", new Color(1f, 0f, 0f));
             FriendlyColor.Bind(config, section, "FriendlyColor", new Color(0f, 0f, 1f));
             BindPosition(config, section);
@@ -59,6 +65,10 @@ namespace NOSDA
             ("Test Friendly Shot Down", "Preview a friendly shootdown, using the current settings below.", "Preview: Friendly Shot Down", "TestKiller", true),
             ("Test Friendly Crash", "Preview a friendly crash (no killer line), using the current settings below.", "Preview: Friendly Crash", null, true),
         };
+
+        // Sample death count shown by every test/preview banner, so the "(N)" text can be tuned
+        // without needing a pilot who's actually died this many times.
+        private const int SampleDeathCount = 3;
 
         private static void BindTestButtons(ConfigFile config, string section)
         {
@@ -111,7 +121,7 @@ namespace NOSDA
 
         private static void DrawTestButton(ConfigEntryBase _, string label, string playerName, string? killerName, bool isFriendly)
         {
-            if (GUILayout.Button(label)) Plugin.Announcer?.Announce(playerName, killerName, isFriendly);
+            if (GUILayout.Button(label)) Plugin.Announcer?.Announce(playerName, SampleDeathCount, killerName, isFriendly);
         }
 
         // Four float channels plus the combined swatch/hex/RGBA CustomDrawer widget that edits

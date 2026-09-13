@@ -9,7 +9,6 @@ namespace NOSDA
     // via BepInEx's F1 Configuration Manager menu) — this file only lays the lines out.
     internal class Banner : MonoBehaviour
     {
-        private const float VisibleSeconds = 2.5f;
         private static readonly Vector2 LineSize = new Vector2(1600, 200);
 
         private Canvas _canvas = null!;
@@ -133,10 +132,12 @@ namespace NOSDA
             text.rectTransform.anchoredPosition = new Vector2(groupWidth / 2f, y);
 
         // killerName is null for a crash (no shooter) — that line is hidden rather than left blank.
-        // isFriendly picks which of BannerConfig's two color sets to use.
-        internal void Show(string playerName, string? killerName, bool isFriendly)
+        // isFriendly picks which of BannerConfig's two color sets to use. deathCount is that
+        // pilot's cumulative death count this session; shown in parentheses after their name once
+        // it's more than one, so a first death doesn't clutter the common case with "(1)".
+        internal void Show(string playerName, int deathCount, string? killerName, bool isFriendly)
         {
-            _nameText.text = playerName;
+            _nameText.text = deathCount > 1 ? $"{playerName} ({deathCount})" : playerName;
             _verbText.text = killerName != null ? "SHOT DOWN" : "CRASHED";
             _killerText.gameObject.SetActive(killerName != null);
             if (killerName != null) _killerText.text = $"by {killerName}";
@@ -151,7 +152,7 @@ namespace NOSDA
 
         private IEnumerator HideAfterDelay()
         {
-            yield return new WaitForSeconds(VisibleSeconds);
+            yield return new WaitForSeconds(BannerConfig.DisplayDuration);
             _root.SetActive(false);
         }
 
@@ -177,7 +178,7 @@ namespace NOSDA
             if (_hideCoroutine != null) { StopCoroutine(_hideCoroutine); _hideCoroutine = null; }
             _livePreviewShowing = true;
 
-            _nameText.text = "PreviewPilot";
+            _nameText.text = "PreviewPilot (3)";
             _verbText.text = "SHOT DOWN";
             _killerText.gameObject.SetActive(true);
             _killerText.text = "by PreviewKiller";

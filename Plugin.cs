@@ -25,6 +25,7 @@ namespace NOSDA
         {
             Log = Logger;
             BannerConfig.Bind(Config);
+            SoundConfig.Bind(Config);
             SceneManager.sceneLoaded += OnSceneLoaded;
 
             var harmony = new Harmony(PluginGuid);
@@ -79,8 +80,9 @@ namespace NOSDA
                 // No local HQ (e.g. not currently in a mission) reads as an enemy kill — the
                 // pre-existing, already-tested default color rather than a guessed-at third state.
                 bool isFriendly = GameManager.GetLocalHQ(out FactionHQ localHq) && localHq != null && killed.GetHQ() == localHq;
+                int deathCount = DeathCounter.RecordDeath(killedAircraft.Player.SteamID);
 
-                Announcer?.Announce(playerName, GetKillerName(killerID), isFriendly);
+                Announcer?.Announce(playerName, deathCount, GetKillerName(killerID), isFriendly);
             }
 
             // Null only when killerID doesn't resolve to any unit (a crash, no shooter). Prefers
