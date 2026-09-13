@@ -70,13 +70,15 @@ namespace NOSDA
             _livePreviewEnemy.SettingChanged += (_, _) => { if (_livePreviewEnemy.Value) _livePreviewFriendly.Value = false; };
             _livePreviewFriendly.SettingChanged += (_, _) => { if (_livePreviewFriendly.Value) _livePreviewEnemy.Value = false; };
 
-            _nameFontSize = config.Bind(section, "NameFontSize", 20,
+            // "TextSize*" keys keep the 3 font sizes adjacent in the F1 menu (sorted alphabetically
+            // by key), with "TextSpacing" sorting right after them.
+            _nameFontSize = config.Bind(section, "TextSizeName", 20,
                 new ConfigDescription("Font size of the player-name line.", new AcceptableValueRange<int>(8, 150)));
-            _verbFontSize = config.Bind(section, "VerbFontSize", 20,
+            _verbFontSize = config.Bind(section, "TextSizeVerb", 20,
                 new ConfigDescription("Font size of the SHOT DOWN / CRASHED line.", new AcceptableValueRange<int>(8, 150)));
-            _killerFontSize = config.Bind(section, "KillerFontSize", 10,
+            _killerFontSize = config.Bind(section, "TextSizeKiller", 10,
                 new ConfigDescription("Font size of the smaller 'by <killer>' line.", new AcceptableValueRange<int>(8, 80)));
-            _lineSpacing = config.Bind(section, "LineSpacing", 0f,
+            _lineSpacing = config.Bind(section, "TextSpacing", 0f,
                 new ConfigDescription("Gap between lines, in canvas units, on top of each line's own text height.", new AcceptableValueRange<float>(0f, 100f)));
 
             EnemyColor.Bind(config, section, "EnemyColor", new Color(1f, 0f, 0f));
