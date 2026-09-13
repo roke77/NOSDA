@@ -67,14 +67,20 @@ namespace NOSDA
 
             private static void Postfix(PersistentID killerID, PersistentID killedID, KillType killedType)
             {
-                // "shot down" (KillTypeExtensions.GetVerb) is only the verb for KillType.Aircraft
-                // with a killer present — an aircraft killed with no killer "crashed" instead.
+                // KillType.Aircraft covers both a shootdown (killerID resolves) and a crash
+                // (killerID doesn't — no shooter, e.g. terrain/fuel/structural failure).
                 if (killedType != KillType.Aircraft) return;
-                if (!UnitRegistry.TryGetPersistentUnit(killerID, out _)) return;
                 if (!UnitRegistry.TryGetPersistentUnit(killedID, out PersistentUnit killed)) return;
                 if (killed.unit is not Aircraft aircraft || aircraft.Player == null) return;
 
-                Announcer?.Announce(aircraft.Player.GetDisplayName(PlayerNameContext.ChatOrLeaderboard));
+                string? killerName = null;
+                if (UnitRegistry.TryGetPersistentUnit(killerID, out PersistentUnit killer)
+                    && killer.unit is Aircraft killerAircraft && killerAircraft.Player != null)
+                {
+                    killerName = killerAircraft.Player.GetDisplayName(PlayerNameContext.ChatOrLeaderboard);
+                }
+
+                Announcer?.Announce(aircraft.Player.GetDisplayName(PlayerNameContext.ChatOrLeaderboard), killerName);
             }
         }
     }

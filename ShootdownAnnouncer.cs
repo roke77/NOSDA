@@ -17,7 +17,9 @@ namespace NOSDA
 
         private AudioSource _audioSource = null!;
         private AudioClip? _clip;
+        private GameObject _bannerRoot = null!;
         private Text _bannerText = null!;
+        private Text _killerText = null!;
         private Coroutine? _hideBanner;
 
         private void Awake()
@@ -61,27 +63,44 @@ namespace NOSDA
             canvas.sortingOrder = short.MaxValue;
             canvasObj.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
 
-            var textObj = new GameObject("NOSDA_BannerText");
-            textObj.transform.SetParent(canvasObj.transform, false);
-            _bannerText = textObj.AddComponent<Text>();
-            _bannerText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            _bannerText.fontSize = 72;
-            _bannerText.fontStyle = FontStyle.Bold;
-            _bannerText.alignment = TextAnchor.MiddleCenter;
-            _bannerText.color = Color.red;
-            RectTransform rect = _bannerText.rectTransform;
-            rect.anchorMin = new Vector2(0.5f, 0.75f);
-            rect.anchorMax = new Vector2(0.5f, 0.75f);
-            rect.sizeDelta = new Vector2(1600, 150);
-            textObj.SetActive(false);
+            _bannerRoot = new GameObject("NOSDA_BannerRoot");
+            _bannerRoot.transform.SetParent(canvasObj.transform, false);
+
+            _bannerText = MakeBannerText("NOSDA_BannerText", 72, FontStyle.Bold, Vector2.zero, new Vector2(1600, 150));
+            // Sits just below the main line — its own anchored position, not a separate anchor point.
+            _killerText = MakeBannerText("NOSDA_KillerText", 28, FontStyle.Normal, new Vector2(0, -90), new Vector2(1600, 60));
+
+            _bannerRoot.SetActive(false);
         }
 
-        internal void Announce(string playerName)
+        private Text MakeBannerText(string name, int fontSize, FontStyle style, Vector2 anchoredPosition, Vector2 size)
+        {
+            var textObj = new GameObject(name);
+            textObj.transform.SetParent(_bannerRoot.transform, false);
+            Text text = textObj.AddComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = fontSize;
+            text.fontStyle = style;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = Color.red;
+            RectTransform rect = text.rectTransform;
+            rect.anchorMin = new Vector2(0.5f, 0.75f);
+            rect.anchorMax = new Vector2(0.5f, 0.75f);
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = size;
+            return text;
+        }
+
+        // killerName is null for a crash (no shooter) — the sub-line is omitted rather than left blank.
+        internal void Announce(string playerName, string? killerName)
         {
             if (_clip != null) _audioSource.PlayOneShot(_clip);
 
-            _bannerText.text = $"{playerName} SHOT DOWN";
-            _bannerText.gameObject.SetActive(true);
+            _bannerText.text = killerName != null ? $"{playerName} SHOT DOWN" : $"{playerName} CRASHED";
+            _killerText.gameObject.SetActive(killerName != null);
+            if (killerName != null) _killerText.text = $"by {killerName}";
+
+            _bannerRoot.SetActive(true);
             if (_hideBanner != null) StopCoroutine(_hideBanner);
             _hideBanner = StartCoroutine(HideAfterDelay());
         }
@@ -89,7 +108,7 @@ namespace NOSDA
         private IEnumerator HideAfterDelay()
         {
             yield return new WaitForSeconds(BannerSeconds);
-            _bannerText.gameObject.SetActive(false);
+            _bannerRoot.SetActive(false);
         }
     }
 }
