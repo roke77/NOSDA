@@ -67,22 +67,34 @@ namespace NOSDA
 
             private static void Postfix(PersistentID killerID, PersistentID killedID, KillType killedType)
             {
-                // KillType.Aircraft covers both a shootdown (killerID resolves) and a crash
-                // (killerID doesn't — no shooter, e.g. terrain/fuel/structural failure).
+                // KillType.Aircraft covers both a shootdown (killerID resolves to some unit —
+                // player or NPC/AI) and a crash (killerID doesn't resolve at all: terrain, fuel,
+                // structural failure).
                 if (killedType != KillType.Aircraft) return;
                 string? playerName = GetPlayerName(killedID);
                 if (playerName == null) return;
 
-                Announcer?.Announce(playerName, GetPlayerName(killerID));
+                Announcer?.Announce(playerName, GetKillerName(killerID));
             }
 
             // Null when id doesn't resolve to a player-controlled Aircraft — an AI unit, a
-            // non-aircraft unit, or (for killerID on a crash) no unit at all.
+            // non-aircraft unit, or no unit at all.
             private static string? GetPlayerName(PersistentID id)
             {
                 if (!UnitRegistry.TryGetPersistentUnit(id, out PersistentUnit unit)) return null;
                 if (unit.unit is not Aircraft aircraft || aircraft.Player == null) return null;
                 return aircraft.Player.GetDisplayName(PlayerNameContext.ChatOrLeaderboard);
+            }
+
+            // Null only when killerID doesn't resolve to any unit (a crash, no shooter). Prefers
+            // the player's display name; falls back to the unit's own name for a non-player killer
+            // (a frigate's guns, a SAM site, an AI aircraft) so that kill still reads as a shootdown.
+            private static string? GetKillerName(PersistentID id)
+            {
+                if (!UnitRegistry.TryGetPersistentUnit(id, out PersistentUnit unit)) return null;
+                if (unit.unit is Aircraft aircraft && aircraft.Player != null)
+                    return aircraft.Player.GetDisplayName(PlayerNameContext.ChatOrLeaderboard);
+                return unit.unitName;
             }
         }
     }
