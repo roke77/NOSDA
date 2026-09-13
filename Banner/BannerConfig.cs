@@ -49,8 +49,7 @@ namespace NOSDA
             BindTestButtons(config, section);
             BindLivePreviewToggles(config, section);
             BindTextSizes(config, section);
-            _displayDuration = config.Bind(section, "DisplayDuration", 2.5f,
-                new ConfigDescription("How long the banner stays on screen, in seconds.", new AcceptableValueRange<float>(0.5f, 10f)));
+            BindDisplayDuration(config, section);
             EnemyColor.Bind(config, section, "EnemyColor", new Color(1f, 0f, 0f));
             FriendlyColor.Bind(config, section, "FriendlyColor", new Color(0f, 0f, 1f));
             BindPosition(config, section);
@@ -91,6 +90,12 @@ namespace NOSDA
                 new ConfigDescription("Keep a friendly-colored sample banner on screen continuously, to preview edits live."));
             _livePreviewEnemy.SettingChanged += (_, _) => { if (_livePreviewEnemy.Value) _livePreviewFriendly.Value = false; };
             _livePreviewFriendly.SettingChanged += (_, _) => { if (_livePreviewFriendly.Value) _livePreviewEnemy.Value = false; };
+        }
+
+        private static void BindDisplayDuration(ConfigFile config, string section)
+        {
+            _displayDuration = config.Bind(section, "DisplayDuration", 2.5f,
+                new ConfigDescription("How long the banner stays on screen, in seconds.", new AcceptableValueRange<float>(0.5f, 10f)));
         }
 
         // "TextSize*" keys keep the 3 font sizes adjacent in the F1 menu (sorted alphabetically by

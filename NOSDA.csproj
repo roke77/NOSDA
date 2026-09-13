@@ -36,6 +36,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- tools/ holds standalone dev projects (self-checks) with their own csproj — never built
+         into the plugin. -->
+    <Compile Remove="tools\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- enemy.wav/friendly.wav ship as loose files next to the DLL, not embedded — so a player can
          replace either with their own file of the same name. Copied alongside the build output for
          local testing; DeployToGame below copies them into BepInEx/plugins/ too. -->
