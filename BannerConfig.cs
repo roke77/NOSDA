@@ -30,8 +30,9 @@ namespace NOSDA
         // isFriendly = the killed player shares the local player's own faction.
         public static Color GetTextColor(bool isFriendly) => (isFriendly ? FriendlyColor : EnemyColor).Value;
 
-        // Screen anchor: (0,0) bottom-left, (1,1) top-right.
-        public static Vector2 AnchorPoint => new Vector2(_horizontalPosition?.Value ?? 0.5f, _verticalPosition?.Value ?? 1f);
+        // 0 = banner's near edge flush with the screen's near edge, 1 = flush with the far edge.
+        public static float PositionHorizontal => _horizontalPosition?.Value ?? 0.5f;
+        public static float PositionVertical => _verticalPosition?.Value ?? 1f;
 
         // A persistent sample banner Banner.Update() keeps showing while true, so slider edits
         // are visible immediately. Mutually exclusive with each other (see Bind).
@@ -81,10 +82,12 @@ namespace NOSDA
             EnemyColor.Bind(config, section, "EnemyColor", new Color(1f, 0f, 0f));
             FriendlyColor.Bind(config, section, "FriendlyColor", new Color(0f, 0f, 1f));
 
-            _horizontalPosition = config.Bind(section, "HorizontalPosition", 0.5f,
-                new ConfigDescription("Horizontal position on screen: 0 = left edge, 1 = right edge.", new AcceptableValueRange<float>(0f, 1f)));
-            _verticalPosition = config.Bind(section, "VerticalPosition", 1f,
-                new ConfigDescription("Vertical position on screen: 0 = bottom edge, 1 = top edge.", new AcceptableValueRange<float>(0f, 1f)));
+            // Named to sort adjacently in the F1 menu, which lists entries alphabetically by key —
+            // "HorizontalPosition"/"VerticalPosition" landed far apart under that sort.
+            _horizontalPosition = config.Bind(section, "PositionHorizontal", 0.5f,
+                new ConfigDescription("Horizontal position: 0 = flush against the screen's left edge, 1 = flush against the right edge. The banner is always fully on screen.", new AcceptableValueRange<float>(0f, 1f)));
+            _verticalPosition = config.Bind(section, "PositionVertical", 1f,
+                new ConfigDescription("Vertical position: 0 = flush against the screen's bottom edge, 1 = flush against the top edge. The banner is always fully on screen.", new AcceptableValueRange<float>(0f, 1f)));
         }
 
         private static void DrawTestButton(ConfigEntryBase _, string label, string playerName, string? killerName, bool isFriendly)
@@ -108,9 +111,11 @@ namespace NOSDA
 
             public void Bind(ConfigFile config, string section, string keyPrefix, Color defaultColor)
             {
-                // Only Red gets a CustomDrawer (the combined widget); Green/Blue/Alpha are hidden
-                // from their own rows since that widget edits all four together.
-                _r = config.Bind(section, $"{keyPrefix}Red", defaultColor.r,
+                // keyPrefix itself (no channel suffix) carries the CustomDrawer — its row label is
+                // what the F1 menu shows, and "EnemyColorRed" read as if the widget only covered
+                // the red channel. Green/Blue/Alpha are separate entries, hidden from their own
+                // rows since that widget edits all four together.
+                _r = config.Bind(section, keyPrefix, defaultColor.r,
                     new ConfigDescription($"{keyPrefix.Replace("Color", "")} kill text color.", new AcceptableValueRange<float>(0f, 1f),
                         new ConfigurationManagerAttributes { CustomDrawer = _ => Draw() }));
                 _g = config.Bind(section, $"{keyPrefix}Green", defaultColor.g,

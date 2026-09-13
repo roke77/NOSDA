@@ -12,6 +12,8 @@ namespace NOSDA
         private const float VisibleSeconds = 2.5f;
         private static readonly Vector2 LineSize = new Vector2(1600, 200);
 
+        private RectTransform _canvasRect = null!;
+        private RectTransform _rootRect = null!;
         private GameObject _root = null!;
         private Text _nameText = null!;
         private Text _verbText = null!;
@@ -25,17 +27,27 @@ namespace NOSDA
             // typeof(RectTransform) is required here — a plain GameObject only gets a Transform,
             // which breaks anchor-based positioning for every UI child parented under it (anchors
             // interpolate against the immediate parent's RectTransform; with none, they collapse
-            // to a single point regardless of the anchor value — this is why HorizontalPosition/
-            // VerticalPosition previously did nothing).
+            // to a single point regardless of the anchor value).
             var canvasObj = new GameObject("NOSDA_Canvas", typeof(RectTransform));
             canvasObj.transform.SetParent(parent, false);
             Canvas canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = short.MaxValue;
             canvasObj.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            _canvasRect = (RectTransform)canvasObj.transform;
 
+            // _root is sized to exactly fit its current content (in ApplyStyle) and anchored to
+            // the canvas's bottom-left corner via its own pivot, so PositionHorizontal/
+            // PositionVertical slide _root's own near edge from 0 (flush against the screen's
+            // near edge) to 1 (flush against the far edge) — the banner is always fully on screen
+            // at every slider value, rather than being anchored by a single point that pushes half
+            // of it off-screen at the extremes (the previous approach's actual bug).
             _root = new GameObject("NOSDA_BannerRoot", typeof(RectTransform));
-            _root.transform.SetParent(canvasObj.transform, false);
+            _root.transform.SetParent(_canvasRect, false);
+            _rootRect = (RectTransform)_root.transform;
+            _rootRect.anchorMin = Vector2.zero;
+            _rootRect.anchorMax = Vector2.zero;
+            _rootRect.pivot = Vector2.zero;
 
             _nameText = MakeText("NOSDA_NameText", FontStyle.Bold);
             _verbText = MakeText("NOSDA_VerbText", FontStyle.Bold);
@@ -55,22 +67,26 @@ namespace NOSDA
             text.alignment = TextAnchor.MiddleCenter;
             text.horizontalOverflow = HorizontalWrapMode.Overflow;
             text.verticalOverflow = VerticalWrapMode.Overflow;
-            // Top-center pivot: anchoredPosition tracks each line's top edge, not its center, so
-            // VerticalPosition=100% puts the first line's top edge flush against the screen's top
-            // edge instead of centering it there (which would push half the line off-screen).
+            // Anchored to _root's own top-left corner, top-center pivot: ApplyStyle positions each
+            // line by its cumulative height from the top of the stack, centered across the group's
+            // own width — independent of _root's pivot/anchor, which only affects _root itself.
+            text.rectTransform.anchorMin = new Vector2(0f, 1f);
+            text.rectTransform.anchorMax = new Vector2(0f, 1f);
             text.rectTransform.pivot = new Vector2(0.5f, 1f);
             text.rectTransform.sizeDelta = LineSize;
             return text;
         }
 
-        // Re-reads BannerConfig and re-stacks the visible lines around the shared anchor point —
-        // top line first, each next line's top edge spacing below the line above by that line's
-        // own text height plus LineSpacing. A hidden killer line leaves no gap behind it.
+        // Re-reads BannerConfig, sizes _root to fit whichever lines are visible, and positions it
+        // so PositionHorizontal/PositionVertical slide it from the screen's near edge (0) to its
+        // far edge (1) — the banner always stays fully on screen. Lines stack inside _root top to
+        // bottom, each spaced below the one above by its own text height plus LineSpacing; a
+        // hidden killer line leaves no gap behind it.
         private void ApplyStyle()
         {
-            Vector2 anchor = BannerConfig.AnchorPoint;
             Color color = BannerConfig.GetTextColor(_isFriendly);
             float spacing = BannerConfig.LineSpacing;
+            bool showKiller = _killerText.gameObject.activeSelf;
 
             _nameText.fontSize = BannerConfig.NameFontSize;
             _verbText.fontSize = BannerConfig.VerbFontSize;
@@ -79,24 +95,31 @@ namespace NOSDA
             _verbText.color = color;
             _killerText.color = color;
 
+            float groupWidth = Mathf.Max(_nameText.preferredWidth, _verbText.preferredWidth,
+                showKiller ? _killerText.preferredWidth : 0f);
+            float groupHeight = _nameText.preferredHeight + spacing + _verbText.preferredHeight;
+            if (showKiller) groupHeight += spacing + _killerText.preferredHeight;
+
             float y = 0f;
-            SetLinePosition(_nameText, anchor, y);
+            SetLinePosition(_nameText, groupWidth, y);
             y -= _nameText.preferredHeight + spacing;
-            SetLinePosition(_verbText, anchor, y);
-            if (_killerText.gameObject.activeSelf)
+            SetLinePosition(_verbText, groupWidth, y);
+            if (showKiller)
             {
                 y -= _verbText.preferredHeight + spacing;
-                SetLinePosition(_killerText, anchor, y);
+                SetLinePosition(_killerText, groupWidth, y);
             }
+
+            _rootRect.sizeDelta = new Vector2(groupWidth, groupHeight);
+            float availableX = Mathf.Max(0f, _canvasRect.rect.width - groupWidth);
+            float availableY = Mathf.Max(0f, _canvasRect.rect.height - groupHeight);
+            _rootRect.anchoredPosition = new Vector2(
+                BannerConfig.PositionHorizontal * availableX,
+                BannerConfig.PositionVertical * availableY);
         }
 
-        private static void SetLinePosition(Text text, Vector2 anchor, float y)
-        {
-            RectTransform rect = text.rectTransform;
-            rect.anchorMin = anchor;
-            rect.anchorMax = anchor;
-            rect.anchoredPosition = new Vector2(0f, y);
-        }
+        private static void SetLinePosition(Text text, float groupWidth, float y) =>
+            text.rectTransform.anchoredPosition = new Vector2(groupWidth / 2f, y);
 
         // killerName is null for a crash (no shooter) — that line is hidden rather than left blank.
         // isFriendly picks which of BannerConfig's two color sets to use.
