@@ -14,7 +14,7 @@ namespace NOSDA
     {
         internal const string PluginGuid = "com.roque.NOSDA";
         internal const string PluginName = "NOSDA";
-        internal const string PluginVersion = "0.3.0";
+        internal const string PluginVersion = "0.4.0";
 
         internal static ManualLogSource? Log;
         internal static ShootdownAnnouncer? Announcer;
