@@ -10,19 +10,6 @@ Whenever the game announces a player has been shot down or crashed, NOSDA plays 
 - **Crash** (no shooter — terrain, fuel, structural failure): `PLAYER CRASHED`, no shooter line. Same enemy/friendly sound choice.
 - If that pilot has already died more than once this session, their name is followed by a count in parentheses, e.g. `PLAYER (3) SHOT DOWN`. This only counts deaths NOSDA has personally observed since the game was launched — it doesn't know about deaths from before you joined the server, or on any other server.
 
-Swap `enemy.wav`/`friendly.wav` out for your own — same filenames, any WAV — to change the sounds.
-
-For more than one file, or a sound assigned to one specific pilot, create a `sounds/` folder next to the DLL:
-
-```
-sounds/
-  enemy/*.wav                  optional — randomizes across every .wav here instead of enemy.wav
-  friendly/*.wav                optional — same, for friendly.wav
-  players/<steamid64>/*.wav     optional — plays only for that pilot's kills, enemy or friendly
-```
-
-Each folder can hold one or more WAVs; with more than one, NOSDA picks a random one each time. A player's personal folder always takes priority over enemy/friendly for their kills. NOSDA logs each kill's SteamID64 to the BepInEx console/log so you can find the ID to use for `players/<steamid64>/`.
-
 If [BepInEx.ConfigurationManager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is installed, press F1 in-game and open NOSDA's "Banner" and "Sound" sections to adjust each line's font size, color, and screen position, the display duration, and the sound volume — all live, with buttons to preview a sample banner without waiting for a real kill.
 
 Runs entirely client-side: it only reacts to a notification the client already receives, so it's safe to use on public servers.
@@ -31,6 +18,48 @@ Runs entirely client-side: it only reacts to a notification the client already r
 
 1. Download `NOSDA_X.Y.Z.zip` from the [latest release](https://github.com/roke77/NOSDA/releases/latest).
 2. Extract `NOSDA.dll`, `enemy.wav`, and `friendly.wav` directly into `BepInEx/plugins/` in your Nuclear Option install.
+
+## Sounds
+
+Three levels, each optional on top of the last — use whichever fits.
+
+**1. Replace the default sounds.** Swap `enemy.wav`/`friendly.wav` for your own — same filenames, any WAV:
+
+```
+BepInEx/plugins/NOSDA/
+  enemy.wav       ← plays when an enemy player is shot down/crashes
+  friendly.wav    ← plays when a friendly player is shot down/crashes
+```
+
+**2. Play a random sound from a pool.** Add a `sounds/enemy/` and/or `sounds/friendly/` folder with as many WAVs as you like — filenames don't matter, only the `.wav` extension:
+
+```
+BepInEx/plugins/NOSDA/
+  sounds/
+    enemy/
+      explosion1.wav
+      explosion2.wav
+    friendly/
+      oof1.wav
+      oof2.wav
+```
+
+A side with an empty or missing folder just falls back to its plain `enemy.wav`/`friendly.wav` — you can mix, e.g. a randomized enemy pool with a single friendly.wav.
+
+**3. Give one pilot their own sound(s).** Add a folder under `sounds/players/` named after that player's **SteamID64**:
+
+```
+BepInEx/plugins/NOSDA/
+  sounds/
+    players/
+      76561198012345678/
+        haha.wav
+        haha2.wav    ← optional extras also randomize
+```
+
+Whenever that pilot dies — enemy or friendly — this pool wins over the enemy/friendly one. NOSDA logs each kill's SteamID64 to the BepInEx console/log (`[NOSDA] PlayerName down (SteamID=...)`), so you can grab an ID from there after playing alongside someone.
+
+**Precedence:** that pilot's personal pool (if they have one) → otherwise the enemy/friendly pool (the `sounds/` folder if it has files, else the plain `enemy.wav`/`friendly.wav`).
 
 ## Build
 
