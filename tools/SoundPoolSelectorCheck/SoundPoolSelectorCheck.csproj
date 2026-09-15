@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Standalone dev tool, NOT part of the plugin build: self-check for SoundPoolSelector, the one
+       piece of sound-pool logic with no Unity/game-API dependency. See tools/README.md to run it. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>SoundPoolSelectorCheck</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../SoundPoolSelector.cs" />
+  </ItemGroup>
+</Project>

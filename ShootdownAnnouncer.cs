@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
@@ -14,11 +15,15 @@ namespace NOSDA
     {
         private const string EnemySoundFileName = "enemy.wav";
         private const string FriendlySoundFileName = "friendly.wav";
+        private const string PlayersFolderName = "players";
 
         private AudioSource _audioSource = null!;
-        private AudioClip? _enemyClip;
-        private AudioClip? _friendlyClip;
         private Banner _banner = null!;
+
+        // Keyed by SoundPoolSelector's keys ("enemy", "friendly", "player:<steamid>"). A pool with
+        // one clip behaves exactly like the old single-clip fields; docs/per-player-and-random-sounds.md.
+        private readonly Dictionary<string, List<AudioClip>> _pools = new Dictionary<string, List<AudioClip>>();
+        private readonly HashSet<ulong> _playerPoolsAvailable = new HashSet<ulong>();
 
         private void Awake()
         {
@@ -26,41 +31,91 @@ namespace NOSDA
             _audioSource.spatialBlend = 0f; // 2D cue, not positional in the 3D scene
             _banner = gameObject.AddComponent<Banner>();
             _banner.Build();
-            StartCoroutine(LoadClip(EnemySoundFileName, clip => _enemyClip = clip));
-            StartCoroutine(LoadClip(FriendlySoundFileName, clip => _friendlyClip = clip));
+
+            string dllDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
+
+            // sounds/enemy/ and sounds/friendly/ are optional randomized pools; if absent, fall
+            // back to the single legacy file next to the DLL so existing installs need no change.
+            string soundsDir = Path.Combine(dllDir, "sounds");
+            StartCoroutine(LoadFallbackPool(SoundPoolSelector.EnemyKey, Path.Combine(soundsDir, "enemy"), Path.Combine(dllDir, EnemySoundFileName)));
+            StartCoroutine(LoadFallbackPool(SoundPoolSelector.FriendlyKey, Path.Combine(soundsDir, "friendly"), Path.Combine(dllDir, FriendlySoundFileName)));
+
+            string playersDir = Path.Combine(soundsDir, PlayersFolderName);
+            if (Directory.Exists(playersDir))
+            {
+                foreach (string playerDir in Directory.GetDirectories(playersDir))
+                {
+                    string folderName = Path.GetFileName(playerDir);
+                    if (!ulong.TryParse(folderName, out ulong steamId))
+                    {
+                        Plugin.Log?.LogWarning($"[NOSDA] sounds/players/{folderName} isn't a valid SteamID64 folder name — skipped.");
+                        continue;
+                    }
+                    _playerPoolsAvailable.Add(steamId);
+                    StartCoroutine(LoadPool("player:" + steamId, playerDir));
+                }
+            }
         }
 
-        // enemy.wav/friendly.wav ship as loose files next to the DLL (not embedded resources)
-        // specifically so a player can drop in their own replacement under the same name.
-        private IEnumerator LoadClip(string fileName, Action<AudioClip> onLoaded)
+        // Loads every *.wav in poolDir if it exists and has any; otherwise loads the single
+        // legacyFile as a one-clip pool, so a fresh install with no sounds/ folder at all behaves
+        // exactly like before.
+        private IEnumerator LoadFallbackPool(string key, string poolDir, string legacyFile)
         {
-            string dllDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
-            string path = Path.Combine(dllDir, fileName);
-            if (!File.Exists(path))
+            string[] files = Directory.Exists(poolDir) ? Directory.GetFiles(poolDir, "*.wav") : Array.Empty<string>();
+            if (files.Length > 0) yield return LoadPool(key, poolDir);
+            else yield return LoadClipsInto(key, new[] { legacyFile });
+        }
+
+        private IEnumerator LoadPool(string key, string poolDir)
+        {
+            string[] files = Directory.GetFiles(poolDir, "*.wav");
+            if (files.Length == 0)
             {
-                Plugin.Log?.LogWarning($"[NOSDA] {fileName} not found next to the plugin DLL ({path}) — that sound is disabled.");
+                Plugin.Log?.LogWarning($"[NOSDA] {poolDir} has no .wav files — that pool is disabled.");
                 yield break;
             }
+            yield return LoadClipsInto(key, files);
+        }
 
-            string url = "file:///" + path.Replace('\\', '/');
-            using UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(url, AudioType.WAV);
-            yield return request.SendWebRequest();
-
-            if (request.result != UnityWebRequest.Result.Success)
+        // sounds ship as loose files (not embedded resources) specifically so a player can drop in
+        // their own replacements.
+        private IEnumerator LoadClipsInto(string key, IReadOnlyList<string> paths)
+        {
+            foreach (string path in paths)
             {
-                Plugin.Log?.LogWarning($"[NOSDA] Failed to load {fileName}: {request.error}");
-                yield break;
+                if (!File.Exists(path))
+                {
+                    Plugin.Log?.LogWarning($"[NOSDA] {path} not found — that sound is disabled.");
+                    continue;
+                }
+
+                string url = "file:///" + path.Replace('\\', '/');
+                using UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(url, AudioType.WAV);
+                yield return request.SendWebRequest();
+
+                if (request.result != UnityWebRequest.Result.Success)
+                {
+                    Plugin.Log?.LogWarning($"[NOSDA] Failed to load {path}: {request.error}");
+                    continue;
+                }
+
+                if (!_pools.TryGetValue(key, out List<AudioClip> clips)) _pools[key] = clips = new List<AudioClip>();
+                clips.Add(DownloadHandlerAudioClip.GetContent(request));
             }
-            onLoaded(DownloadHandlerAudioClip.GetContent(request));
         }
 
         // killerName is null for a crash (no shooter). isFriendly is whether the killed player
-        // shares the local player's own faction — it picks the sound and banner color. deathCount
-        // is that pilot's cumulative death count this session (DeathCounter.RecordDeath).
-        internal void Announce(string playerName, int deathCount, string? killerName, bool isFriendly)
+        // shares the local player's own faction — it picks the fallback sound/banner color.
+        // deathCount is that pilot's cumulative death count this session (DeathCounter.RecordDeath).
+        internal void Announce(ulong steamId, string playerName, int deathCount, string? killerName, bool isFriendly)
         {
-            AudioClip? clip = isFriendly ? _friendlyClip : _enemyClip;
-            if (clip != null) _audioSource.PlayOneShot(clip, SoundConfig.Volume);
+            string key = SoundPoolSelector.ResolveKey(steamId, isFriendly, _playerPoolsAvailable);
+            if (_pools.TryGetValue(key, out List<AudioClip> clips) && clips.Count > 0)
+            {
+                AudioClip clip = clips[UnityEngine.Random.Range(0, clips.Count)];
+                _audioSource.PlayOneShot(clip, SoundConfig.Volume);
+            }
             _banner.Show(playerName, deathCount, killerName, isFriendly);
         }
     }

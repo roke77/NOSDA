@@ -12,6 +12,17 @@ Whenever the game announces a player has been shot down or crashed, NOSDA plays 
 
 Swap `enemy.wav`/`friendly.wav` out for your own — same filenames, any WAV — to change the sounds.
 
+For more than one file, or a sound assigned to one specific pilot, create a `sounds/` folder next to the DLL:
+
+```
+sounds/
+  enemy/*.wav                  optional — randomizes across every .wav here instead of enemy.wav
+  friendly/*.wav                optional — same, for friendly.wav
+  players/<steamid64>/*.wav     optional — plays only for that pilot's kills, enemy or friendly
+```
+
+Each folder can hold one or more WAVs; with more than one, NOSDA picks a random one each time. A player's personal folder always takes priority over enemy/friendly for their kills. NOSDA logs each kill's SteamID64 to the BepInEx console/log so you can find the ID to use for `players/<steamid64>/`.
+
 If [BepInEx.ConfigurationManager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is installed, press F1 in-game and open NOSDA's "Banner" and "Sound" sections to adjust each line's font size, color, and screen position, the display duration, and the sound volume — all live, with buttons to preview a sample banner without waiting for a real kill.
 
 Runs entirely client-side: it only reacts to a notification the client already receives, so it's safe to use on public servers.

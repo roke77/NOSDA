@@ -77,12 +77,17 @@ namespace NOSDA
                 if (killed.unit is not Aircraft killedAircraft || killedAircraft.Player == null) return;
 
                 string playerName = killedAircraft.Player.GetDisplayName(PlayerNameContext.ChatOrLeaderboard);
+                ulong steamId = killedAircraft.Player.SteamID;
                 // No local HQ (e.g. not currently in a mission) reads as an enemy kill — the
                 // pre-existing, already-tested default color rather than a guessed-at third state.
                 bool isFriendly = GameManager.GetLocalHQ(out FactionHQ localHq) && localHq != null && killed.GetHQ() == localHq;
-                int deathCount = DeathCounter.RecordDeath(killedAircraft.Player.SteamID);
+                int deathCount = DeathCounter.RecordDeath(steamId);
 
-                Announcer?.Announce(playerName, deathCount, GetKillerName(killerID), isFriendly);
+                // Logged so a player can find someone's SteamID64 to give them a personal sound
+                // (docs/per-player-and-random-sounds.md) without needing an external site.
+                Log?.LogInfo($"[NOSDA] {playerName} down (SteamID={steamId})");
+
+                Announcer?.Announce(steamId, playerName, deathCount, GetKillerName(killerID), isFriendly);
             }
 
             // Null only when killerID doesn't resolve to any unit (a crash, no shooter). Prefers

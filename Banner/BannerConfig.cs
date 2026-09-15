@@ -126,7 +126,9 @@ namespace NOSDA
 
         private static void DrawTestButton(ConfigEntryBase _, string label, string playerName, string? killerName, bool isFriendly)
         {
-            if (GUILayout.Button(label)) Plugin.Announcer?.Announce(playerName, SampleDeathCount, killerName, isFriendly);
+            // steamId 0: a test button has no real pilot, so it always hits the enemy/friendly
+            // pool rather than some arbitrary player's personal one.
+            if (GUILayout.Button(label)) Plugin.Announcer?.Announce(0, playerName, SampleDeathCount, killerName, isFriendly);
         }
 
         // Four float channels plus the combined swatch/hex/RGBA CustomDrawer widget that edits
