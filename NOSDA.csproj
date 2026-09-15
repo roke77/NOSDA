@@ -23,7 +23,7 @@
     <AssemblyName>NOSDA</AssemblyName>
     <Product>NOSDA</Product>
     <Description>Nuclear Option Shut-Down Announcer: plays a sound and shows a banner when a player is shot down or crashes</Description>
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <RootNamespace>NOSDA</RootNamespace>
