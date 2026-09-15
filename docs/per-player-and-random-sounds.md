@@ -6,7 +6,7 @@ sound variants played at random instead of one fixed file per category.
 ## Current behavior (baseline)
 
 `ShootdownAnnouncer` loads exactly one `AudioClip` each for `enemy.wav` and `friendly.wav` from
-next to the DLL (`LoadClip` in [ShootdownAnnouncer.cs](../ShootdownAnnouncer.cs)) and
+next to the DLL (`LoadClip` in [ShootdownAnnouncer.cs](../src/plugin/ShootdownAnnouncer.cs)) and
 `Announce()` always plays whichever one matches `isFriendly`.
 
 ## Design
@@ -37,7 +37,7 @@ keeps the same "drop a file in next to the DLL" convention players already know,
 a folder when they want more than one file.
 
 SteamID64 is what `DeathCounter` already keys deaths by
-([DeathCounter.cs](../DeathCounter.cs)), so no new identifier is introduced. SteamID `0` (a
+([DeathCounter.cs](../src/plugin/DeathCounter.cs)), so no new identifier is introduced. SteamID `0` (a
 non-Steam/LAN player — see `DeathCounter`'s own comment on this) never gets a personal pool
 lookup, since every such player shares that key and a "personal" sound would leak across all of
 them.
