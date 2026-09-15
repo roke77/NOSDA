@@ -52,24 +52,24 @@ namespace NOSDA
                         continue;
                     }
                     _playerPoolsAvailable.Add(steamId);
-                    StartCoroutine(LoadPool("player:" + steamId, playerDir));
+                    StartCoroutine(LoadPlayerPool("player:" + steamId, playerDir));
                 }
             }
         }
 
-        // Loads every *.wav in poolDir if it exists and has any; otherwise loads the single
-        // legacyFile as a one-clip pool, so a fresh install with no sounds/ folder at all behaves
-        // exactly like before.
+        private static string[] ListWavFiles(string dir) => Directory.Exists(dir) ? Directory.GetFiles(dir, "*.wav") : Array.Empty<string>();
+
+        // Loads every *.wav in poolDir if it has any; otherwise loads the single legacyFile as a
+        // one-clip pool, so a fresh install with no sounds/ folder at all behaves exactly like before.
         private IEnumerator LoadFallbackPool(string key, string poolDir, string legacyFile)
         {
-            string[] files = Directory.Exists(poolDir) ? Directory.GetFiles(poolDir, "*.wav") : Array.Empty<string>();
-            if (files.Length > 0) yield return LoadPool(key, poolDir);
-            else yield return LoadClipsInto(key, new[] { legacyFile });
+            string[] files = ListWavFiles(poolDir);
+            return LoadClipsInto(key, files.Length > 0 ? files : new[] { legacyFile });
         }
 
-        private IEnumerator LoadPool(string key, string poolDir)
+        private IEnumerator LoadPlayerPool(string key, string poolDir)
         {
-            string[] files = Directory.GetFiles(poolDir, "*.wav");
+            string[] files = ListWavFiles(poolDir);
             if (files.Length == 0)
             {
                 Plugin.Log?.LogWarning($"[NOSDA] {poolDir} has no .wav files — that pool is disabled.");
