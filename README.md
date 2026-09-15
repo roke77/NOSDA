@@ -8,7 +8,7 @@ Whenever the game announces a player has been shot down or crashed, NOSDA plays 
 
 - **Shot down**: `PLAYER SHOT DOWN`, with the shooter's name shown underneath. Plays `enemy.wav` if the shot-down player is on a different faction than you, `friendly.wav` if they share yours.
 - **Crash** (no shooter — terrain, fuel, structural failure): `PLAYER CRASHED`, no shooter line. Same enemy/friendly sound choice.
-- If that pilot has already died more than once this session, their name is followed by a count in parentheses, e.g. `PLAYER (3) SHOT DOWN`. This only counts deaths NOSDA has personally observed since the game was launched — it doesn't know about deaths from before you joined the server, or on any other server.
+- If that pilot has already died more than once this mission, their name is followed by a count in parentheses, e.g. `PLAYER (3) SHOT DOWN`. The count resets whenever a mission starts (leaving to the main menu, restarting, or starting a new one), and only counts deaths NOSDA has personally observed — it doesn't know about deaths from before you joined the server, or on any other server.
 
 If [BepInEx.ConfigurationManager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is installed, press F1 in-game and open NOSDA's "Banner" and "Sound" sections to adjust each line's font size, color, and screen position, the display duration, and the sound volume — all live, with buttons to preview a sample banner without waiting for a real kill.
 

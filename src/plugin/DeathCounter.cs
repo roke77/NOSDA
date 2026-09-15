@@ -2,8 +2,9 @@ using System.Collections.Generic;
 
 namespace NOSDA
 {
-    // How many times each pilot (by Steam ID) has been shot down or crashed this session. Resets
-    // whenever the game restarts — it's purely a local tally of what this client has observed, not
+    // How many times each pilot (by Steam ID) has been shot down or crashed this mission. Reset by
+    // MissionLifecycle whenever a mission starts (including a restart or leaving to the main menu
+    // and starting another) — it's purely a local tally of what this client has observed, not
     // synced with other players, so a pilot who already died on a server before you joined starts
     // back at zero from your point of view.
     //
@@ -21,5 +22,7 @@ namespace NOSDA
             _counts[steamId] = count;
             return count;
         }
+
+        internal static void Reset() => _counts.Clear();
     }
 }

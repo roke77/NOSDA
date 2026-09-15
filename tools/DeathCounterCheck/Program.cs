@@ -14,4 +14,8 @@ int otherSteamIdZero = DeathCounter.RecordDeath(0);
 if (sameSteamIdZero != 1 || otherSteamIdZero != 2)
     throw new Exception($"steamId 0 (non-Steam/LAN players) is a known shared bucket by design, not a bug — got {sameSteamIdZero}, {otherSteamIdZero}");
 
+DeathCounter.Reset();
+int afterReset = DeathCounter.RecordDeath(123);
+if (afterReset != 1) throw new Exception($"a death after Reset() should start back at 1, got {afterReset}");
+
 Console.WriteLine("DeathCounter: OK");

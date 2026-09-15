@@ -45,6 +45,7 @@ namespace NOSDA
             var worker = new GameObject("NOSDA_Worker");
             DontDestroyOnLoad(worker);
             Announcer = worker.AddComponent<ShootdownAnnouncer>();
+            worker.AddComponent<MissionLifecycle>();
         }
 
         // MessageManager.RpcKillMessage is the ClientRpc that drives the game's own kill-feed
